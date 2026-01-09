@@ -14,6 +14,9 @@ Display beautiful analytics charts from Cabin Analytics with dashboard widgets, 
 
 Cabin Analytics Dashboard seamlessly integrates Cabin Analytics into your WordPress site. This plugin provides multiple ways to display your site analytics:
 
+<img width="1212" height="766" alt="image" src="https://github.com/user-attachments/assets/02022d28-5fad-4158-a3dd-ccb1ed75fdce" />
+
+
 * **Dashboard Widget**: View your analytics directly in the WordPress admin dashboard
 * **Gutenberg Block**: Add analytics charts to any post or page using the block editor
 * **Shortcode**: Use `[cabin_analytics]` shortcode for maximum flexibility

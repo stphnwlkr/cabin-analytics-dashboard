@@ -1,0 +1,43 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "cabin/analytics-dashboard",
+	"version": "0.1.0",
+	"title": "Cabin Analytics Dashboard",
+	"category": "widgets",
+	"icon": "chart-bar",
+	"description": "Display Cabin Analytics data with interactive charts",
+	"example": {},
+	"attributes": {
+		"domain": {
+			"type": "string",
+			"default": ""
+		},
+		"chartType": {
+			"type": "string",
+			"default": ""
+		},
+		"dateRange": {
+			"type": "string",
+			"default": ""
+		},
+		"allowSwitching": {
+			"type": "boolean",
+			"default": true
+		},
+		"dashboardUrl": {
+			"type": "string",
+			"default": ""
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": true
+	},
+	"textdomain": "cabin-analytics-dashboard",
+	"editorScript": "file:./index.js",
+	"editorStyle": "file:./index.css",
+	"style": "file:./style-index.css",
+	"viewScript": "file:./view.js",
+	"render": "file:./render.php"
+}

@@ -1,0 +1,1821 @@
+<?xml version="1.0"?><artefact xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="artefact.xsd" name="Cabin Analytics Dashboard" slug="cabin-analytics-dashboard" type="code-package" schemaVersion="2">
+  <file path="readme.txt">
+    <description>This file contains the readme information for the block. It is used to provide information about the block, its usage, and any other relevant details.</description>
+    <content><![CDATA[
+=== Cabin Analytics Dashboard ===
+
+Contributors:      Stephen Walker, WordPress Telex
+Tags:              block, analytics, cabin, dashboard, charts
+Tested up to:      6.9
+Stable tag:        1.0.1
+License:           GPLv2 or later
+License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+
+Display beautiful analytics charts from Cabin Analytics with dashboard widgets, blocks, and shortcodes.
+
+== Description ==
+
+Cabin Analytics Dashboard seamlessly integrates Cabin Analytics into your WordPress site. This plugin provides multiple ways to display your site analytics:
+
+* **Dashboard Widget**: View your analytics directly in the WordPress admin dashboard
+* **Gutenberg Block**: Add analytics charts to any post or page using the block editor
+* **Shortcode**: Use `[cabin_analytics]` shortcode for maximum flexibility
+
+**Features:**
+
+* Interactive stacked bar and line charts showing page views and unique visitors
+* Switch between chart types (bar/line) on the fly
+* Configurable date ranges (7, 14, 30, or 90 days)
+* Global settings in WordPress admin for API key, default domain, and preferences
+* Per-block/shortcode overrides for domain and display settings
+* Real-time data fetching from Cabin Analytics API
+* Responsive design that works on all devices
+* Clean, modern UI matching WordPress design patterns
+
+**Chart Options:**
+
+* Stacked bar chart for daily comparisons
+* Line chart for trend visualization
+* Toggle between views without page reload
+* Hover tooltips showing detailed statistics
+
+**Admin Configuration:**
+
+Set up your Cabin Analytics integration once in Settings → Cabin Analytics:
+* Add your Cabin Analytics API key
+* Configure default domain to track
+* Choose default chart type (bar or line)
+* Set default date range
+* Test API connection
+
+**Block & Shortcode Customization:**
+
+Each block or shortcode instance can override defaults:
+* Track different domains
+* Use different chart types
+* Show different date ranges
+* Allow or restrict user interactions
+
+== Installation ==
+
+1. Upload the plugin files to the `/wp-content/plugins/cabin-analytics-dashboard` directory, or install the plugin through the WordPress plugins screen directly.
+2. Activate the plugin through the 'Plugins' screen in WordPress
+3. Navigate to Settings → Cabin Analytics to configure your API key and preferences
+4. Add the Cabin Analytics Dashboard block to any page or use the `[cabin_analytics]` shortcode
+
+== Frequently Asked Questions ==
+
+= Where do I get a Cabin Analytics API key? =
+
+Visit https://withcabin.com and log into your account. Navigate to your site settings to generate an API key.
+
+= Can I display analytics for multiple domains? =
+
+Yes! While you set a default domain in the settings, each block or shortcode instance can override this to display analytics for different domains.
+
+= What's the difference between the block and shortcode? =
+
+They provide the same functionality. Use the block in the Gutenberg editor for a visual interface, or use the shortcode `[cabin_analytics]` in classic editor, widgets, or custom code.
+
+= Can visitors switch between chart types? =
+
+Yes, by default visitors can toggle between bar and line charts and change date ranges. You can disable this in block settings if you prefer.
+
+= Does this work with Cabin Analytics v1 or v2? =
+
+This plugin uses the Cabin Analytics API v1 as documented at https://docs.withcabin.com/api
+
+== Screenshots ==
+
+1. Dashboard widget showing analytics data with interactive charts
+2. Block editor interface with customization options
+3. Admin settings page for global configuration
+4. Line chart view with date range selector
+5. Stacked bar chart showing unique visitors vs total visitors
+
+== Changelog ==
+
+= 1.0.0 =
+* Initial release
+* Dashboard widget integration
+* Gutenberg block with full customization
+* Shortcode support
+* Admin settings page
+* Interactive chart switching (bar/line)
+* Multiple date range options (7, 14, 30, 90 days)
+* API key management
+* Multi-domain support
+
+== Shortcode Usage ==
+
+Basic usage:
+`[cabin_analytics]`
+
+With custom parameters:
+`[cabin_analytics domain="example.com" chart_type="line" date_range="30" allow_switching="true"]`
+
+Parameters:
+* `domain` - Override default domain
+* `chart_type` - "bar" or "line"
+* `date_range` - "7", "14", "30", or "90"
+* `allow_switching` - "true" or "false"
+]]></content>
+  </file>
+  <file path="cabin-analytics-dashboard.php">
+    <description>This file contains the block registration code in the form of a single block plugin. Any other plugin related functionality should be added to this file. All block rendering functionality should go to the `render.php` file.</description>
+    <content><![CDATA[<?php
+/**
+ * Plugin Name:       Cabin Analytics Dashboard
+ * Plugin URI:        https://withcabin.com
+ * Description:       Display Cabin Analytics data with interactive charts via dashboard widgets, blocks, and shortcodes.
+ * Version:           0.1.0
+ * Requires at least: 6.1
+ * Requires PHP:      7.4
+ * Author:            WordPress Telex
+ * License:           GPLv2 or later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain:       cabin-analytics-dashboard
+ *
+ * @package CabinAnalyticsDashboard
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+define( 'CABIN_ANALYTICS_VERSION', '0.1.0' );
+define( 'CABIN_ANALYTICS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'CABIN_ANALYTICS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+
+/**
+ * Registers the block using the metadata loaded from the `block.json` file.
+ */
+function cabin_analytics_dashboard_block_init() {
+	register_block_type( CABIN_ANALYTICS_PLUGIN_DIR . 'build/' );
+}
+add_action( 'init', 'cabin_analytics_dashboard_block_init' );
+
+/**
+ * Register admin settings page
+ */
+function cabin_analytics_dashboard_add_admin_menu() {
+	add_options_page(
+		__( 'Cabin Analytics Settings', 'cabin-analytics-dashboard' ),
+		__( 'Cabin Analytics', 'cabin-analytics-dashboard' ),
+		'manage_options',
+		'cabin-analytics-dashboard',
+		'cabin_analytics_dashboard_options_page'
+	);
+}
+add_action( 'admin_menu', 'cabin_analytics_dashboard_add_admin_menu' );
+
+/**
+ * Enqueue admin styles
+ */
+function cabin_analytics_dashboard_admin_styles( $hook ) {
+	if ( 'settings_page_cabin-analytics-dashboard' !== $hook ) {
+		return;
+	}
+	
+	$asset_file = include( CABIN_ANALYTICS_PLUGIN_DIR . 'build/index.asset.php' );
+	
+	wp_enqueue_style(
+		'cabin-analytics-admin',
+		CABIN_ANALYTICS_PLUGIN_URL . 'build/admin.css',
+		array(),
+		$asset_file['version']
+	);
+}
+add_action( 'admin_enqueue_scripts', 'cabin_analytics_dashboard_admin_styles' );
+
+/**
+ * Register settings
+ */
+function cabin_analytics_dashboard_settings_init() {
+	register_setting( 
+		'cabin_analytics_dashboard', 
+		'cabin_analytics_dashboard_options',
+		array(
+			'sanitize_callback' => 'cabin_analytics_dashboard_sanitize_options',
+			'default' => array(
+				'api_key' => '',
+				'domain' => '',
+				'chart_type' => 'bar',
+				'date_range' => '7',
+				'dashboard_url' => '',
+			),
+		)
+	);
+
+	add_settings_section(
+		'cabin_analytics_dashboard_section',
+		__( 'Cabin Analytics Configuration', 'cabin-analytics-dashboard' ),
+		'cabin_analytics_dashboard_section_callback',
+		'cabin_analytics_dashboard'
+	);
+
+	add_settings_field(
+		'cabin_analytics_api_key',
+		__( 'API Key', 'cabin-analytics-dashboard' ),
+		'cabin_analytics_api_key_render',
+		'cabin_analytics_dashboard',
+		'cabin_analytics_dashboard_section'
+	);
+
+	add_settings_field(
+		'cabin_analytics_domain',
+		__( 'Default Domain', 'cabin-analytics-dashboard' ),
+		'cabin_analytics_domain_render',
+		'cabin_analytics_dashboard',
+		'cabin_analytics_dashboard_section'
+	);
+
+	add_settings_field(
+		'cabin_analytics_chart_type',
+		__( 'Default Chart Type', 'cabin-analytics-dashboard' ),
+		'cabin_analytics_chart_type_render',
+		'cabin_analytics_dashboard',
+		'cabin_analytics_dashboard_section'
+	);
+
+	add_settings_field(
+		'cabin_analytics_date_range',
+		__( 'Default Date Range', 'cabin-analytics-dashboard' ),
+		'cabin_analytics_date_range_render',
+		'cabin_analytics_dashboard',
+		'cabin_analytics_dashboard_section'
+	);
+
+	add_settings_field(
+		'cabin_analytics_dashboard_url',
+		__( 'Default Dashboard URL', 'cabin-analytics-dashboard' ),
+		'cabin_analytics_dashboard_url_render',
+		'cabin_analytics_dashboard',
+		'cabin_analytics_dashboard_section'
+	);
+}
+add_action( 'admin_init', 'cabin_analytics_dashboard_settings_init' );
+
+/**
+ * Sanitize options callback
+ */
+function cabin_analytics_dashboard_sanitize_options( $input ) {
+	$sanitized = array();
+	
+	if ( isset( $input['api_key'] ) ) {
+		$sanitized['api_key'] = sanitize_text_field( $input['api_key'] );
+	}
+	
+	if ( isset( $input['domain'] ) ) {
+		$sanitized['domain'] = sanitize_text_field( trim( str_replace( array( 'http://', 'https://', 'www.' ), '', $input['domain'] ), '/' ) );
+	}
+	
+	if ( isset( $input['chart_type'] ) && in_array( $input['chart_type'], array( 'bar', 'line' ), true ) ) {
+		$sanitized['chart_type'] = $input['chart_type'];
+	}
+	
+	if ( isset( $input['date_range'] ) && in_array( $input['date_range'], array( '7', '14', '30', '90' ), true ) ) {
+		$sanitized['date_range'] = $input['date_range'];
+	}
+	
+	if ( isset( $input['dashboard_url'] ) ) {
+		$sanitized['dashboard_url'] = esc_url_raw( $input['dashboard_url'] );
+	}
+	
+	return $sanitized;
+}
+
+/**
+ * Render API key field
+ */
+function cabin_analytics_api_key_render() {
+	$options = get_option( 'cabin_analytics_dashboard_options' );
+	$api_key = isset( $options['api_key'] ) ? $options['api_key'] : '';
+	?>
+	<div class="cabin-field-wrapper">
+		<input type="text" name="cabin_analytics_dashboard_options[api_key]" value="<?php echo esc_attr( $api_key ); ?>" class="cabin-input" placeholder="sk_live_..." autocomplete="off" />
+		<p class="cabin-description">
+			<svg class="cabin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+				<circle cx="12" cy="12" r="10"/>
+				<path d="M12 16v-4M12 8h.01"/>
+			</svg>
+			<?php esc_html_e( 'Enter your Cabin Analytics API key from withcabin.com', 'cabin-analytics-dashboard' ); ?>
+		</p>
+	</div>
+	<?php
+}
+
+/**
+ * Render domain field
+ */
+function cabin_analytics_domain_render() {
+	$options = get_option( 'cabin_analytics_dashboard_options' );
+	$domain = isset( $options['domain'] ) ? $options['domain'] : '';
+	?>
+	<div class="cabin-field-wrapper">
+		<input type="text" name="cabin_analytics_dashboard_options[domain]" value="<?php echo esc_attr( $domain ); ?>" class="cabin-input" placeholder="example.com" />
+		<p class="cabin-description">
+			<svg class="cabin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+				<circle cx="12" cy="12" r="10"/>
+				<path d="M12 16v-4M12 8h.01"/>
+			</svg>
+			<?php esc_html_e( 'Your default domain to track (without https://)', 'cabin-analytics-dashboard' ); ?>
+		</p>
+	</div>
+	<?php
+}
+
+/**
+ * Render chart type field
+ */
+function cabin_analytics_chart_type_render() {
+	$options = get_option( 'cabin_analytics_dashboard_options' );
+	$chart_type = isset( $options['chart_type'] ) ? $options['chart_type'] : 'bar';
+	?>
+	<div class="cabin-field-wrapper">
+		<select name="cabin_analytics_dashboard_options[chart_type]" class="cabin-select">
+			<option value="bar" <?php selected( $chart_type, 'bar' ); ?>><?php esc_html_e( 'Stacked Bar Chart', 'cabin-analytics-dashboard' ); ?></option>
+			<option value="line" <?php selected( $chart_type, 'line' ); ?>><?php esc_html_e( 'Line Chart', 'cabin-analytics-dashboard' ); ?></option>
+		</select>
+	</div>
+	<?php
+}
+
+/**
+ * Render date range field
+ */
+function cabin_analytics_date_range_render() {
+	$options = get_option( 'cabin_analytics_dashboard_options' );
+	$date_range = isset( $options['date_range'] ) ? $options['date_range'] : '7';
+	?>
+	<div class="cabin-field-wrapper">
+		<select name="cabin_analytics_dashboard_options[date_range]" class="cabin-select">
+			<option value="7" <?php selected( $date_range, '7' ); ?>><?php esc_html_e( 'Last 7 Days', 'cabin-analytics-dashboard' ); ?></option>
+			<option value="14" <?php selected( $date_range, '14' ); ?>><?php esc_html_e( 'Last 14 Days', 'cabin-analytics-dashboard' ); ?></option>
+			<option value="30" <?php selected( $date_range, '30' ); ?>><?php esc_html_e( 'Last 30 Days', 'cabin-analytics-dashboard' ); ?></option>
+			<option value="90" <?php selected( $date_range, '90' ); ?>><?php esc_html_e( 'Last 90 Days', 'cabin-analytics-dashboard' ); ?></option>
+		</select>
+	</div>
+	<?php
+}
+
+/**
+ * Render dashboard URL field
+ */
+function cabin_analytics_dashboard_url_render() {
+	$options = get_option( 'cabin_analytics_dashboard_options' );
+	$dashboard_url = isset( $options['dashboard_url'] ) ? $options['dashboard_url'] : '';
+	?>
+	<div class="cabin-field-wrapper">
+		<input type="url" name="cabin_analytics_dashboard_options[dashboard_url]" value="<?php echo esc_attr( $dashboard_url ); ?>" class="cabin-input" placeholder="https://withcabin.com/dashboard/example.com" />
+		<p class="cabin-description">
+			<svg class="cabin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+				<circle cx="12" cy="12" r="10"/>
+				<path d="M12 16v-4M12 8h.01"/>
+			</svg>
+			<?php esc_html_e( 'Custom URL for the "Go to Dashboard" link. Leave empty for default: https://withcabin.com/dashboard/{domain}', 'cabin-analytics-dashboard' ); ?>
+		</p>
+	</div>
+	<?php
+}
+
+/**
+ * Section callback
+ */
+function cabin_analytics_dashboard_section_callback() {
+	echo '<p class="cabin-section-description">' . esc_html__( 'Configure your Cabin Analytics settings. These will be used as defaults for the dashboard widget, block, and shortcode.', 'cabin-analytics-dashboard' ) . '</p>';
+}
+
+/**
+ * Options page
+ */
+function cabin_analytics_dashboard_options_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	
+	if ( isset( $_GET['settings-updated'] ) ) {
+		add_settings_error(
+			'cabin_analytics_dashboard_messages',
+			'cabin_analytics_dashboard_message',
+			__( 'Settings saved successfully.', 'cabin-analytics-dashboard' ),
+			'success'
+		);
+	}
+	
+	settings_errors( 'cabin_analytics_dashboard_messages' );
+	?>
+	<div class="cabin-admin-wrap">
+		<div class="cabin-admin-header">
+			<div class="cabin-header-content">
+				<svg class="cabin-logo" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+					<rect x="4" y="12" width="4" height="8"/>
+					<rect x="10" y="8" width="4" height="12"/>
+					<rect x="16" y="4" width="4" height="16"/>
+				</svg>
+				<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+			</div>
+			<p class="cabin-tagline"><?php esc_html_e( 'Privacy-first analytics for WordPress', 'cabin-analytics-dashboard' ); ?></p>
+		</div>
+
+		<div class="cabin-admin-content">
+			<div class="cabin-admin-main">
+				<form action="options.php" method="post" class="cabin-form">
+					<?php
+					settings_fields( 'cabin_analytics_dashboard' );
+					do_settings_sections( 'cabin_analytics_dashboard' );
+					?>
+					<div class="cabin-form-actions">
+						<?php submit_button( __( 'Save Settings', 'cabin-analytics-dashboard' ), 'primary', 'submit', false ); ?>
+					</div>
+				</form>
+			</div>
+
+			<div class="cabin-admin-sidebar">
+				<div class="cabin-card">
+					<h3 class="cabin-card-title">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+							<path d="M12 2L2 7l10 5 10-5-10-5z"/>
+							<path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+						</svg>
+						<?php esc_html_e( 'Usage', 'cabin-analytics-dashboard' ); ?>
+					</h3>
+					<div class="cabin-card-content">
+						<h4><?php esc_html_e( 'Dashboard Widget', 'cabin-analytics-dashboard' ); ?></h4>
+						<p><?php esc_html_e( 'Automatically appears on your WordPress dashboard after configuration.', 'cabin-analytics-dashboard' ); ?></p>
+						
+						<h4><?php esc_html_e( 'Block Editor', 'cabin-analytics-dashboard' ); ?></h4>
+						<p><?php esc_html_e( 'Search for "Cabin Analytics" in the block inserter to add analytics to any post or page.', 'cabin-analytics-dashboard' ); ?></p>
+						
+						<h4><?php esc_html_e( 'Shortcode', 'cabin-analytics-dashboard' ); ?></h4>
+						<code class="cabin-code">[cabin_analytics]</code>
+						<p><?php esc_html_e( 'With parameters:', 'cabin-analytics-dashboard' ); ?></p>
+						<code class="cabin-code">[cabin_analytics domain="example.com" chart_type="line" date_range="30"]</code>
+					</div>
+				</div>
+
+				<div class="cabin-card">
+					<h3 class="cabin-card-title">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+							<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+							<polyline points="15 3 21 3 21 9"/>
+							<line x1="10" y1="14" x2="21" y2="3"/>
+						</svg>
+						<?php esc_html_e( 'Resources', 'cabin-analytics-dashboard' ); ?>
+					</h3>
+					<div class="cabin-card-content">
+						<ul class="cabin-links">
+							<li><a href="https://withcabin.com" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Cabin Analytics Website', 'cabin-analytics-dashboard' ); ?></a></li>
+							<li><a href="https://docs.withcabin.com" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Documentation', 'cabin-analytics-dashboard' ); ?></a></li>
+							<li><a href="https://docs.withcabin.com/api" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'API Reference', 'cabin-analytics-dashboard' ); ?></a></li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<?php
+}
+
+/**
+ * Register REST API endpoint for fetching analytics data
+ */
+function cabin_analytics_dashboard_register_rest_routes() {
+	register_rest_route( 'cabin-analytics/v1', '/stats', array(
+		'methods' => 'GET',
+		'callback' => 'cabin_analytics_dashboard_get_stats',
+		'permission_callback' => '__return_true',
+		'args' => array(
+			'domain' => array(
+				'required' => false,
+				'type' => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'start_date' => array(
+				'required' => true,
+				'type' => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'validate_callback' => 'cabin_analytics_validate_date',
+			),
+			'end_date' => array(
+				'required' => true,
+				'type' => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+				'validate_callback' => 'cabin_analytics_validate_date',
+			),
+		),
+	) );
+}
+add_action( 'rest_api_init', 'cabin_analytics_dashboard_register_rest_routes' );
+
+/**
+ * Validate date format
+ */
+function cabin_analytics_validate_date( $value, $request, $param ) {
+	return (bool) preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value );
+}
+
+/**
+ * Get stats from Cabin API
+ */
+function cabin_analytics_dashboard_get_stats( $request ) {
+	$options = get_option( 'cabin_analytics_dashboard_options' );
+	$api_key = isset( $options['api_key'] ) ? trim( $options['api_key'] ) : '';
+	
+	if ( empty( $api_key ) ) {
+		return new WP_Error( 'no_api_key', __( 'Cabin Analytics API key not configured', 'cabin-analytics-dashboard' ), array( 'status' => 400 ) );
+	}
+
+	$domain = $request->get_param( 'domain' );
+	if ( empty( $domain ) ) {
+		$domain = isset( $options['domain'] ) ? trim( $options['domain'] ) : '';
+	}
+
+	if ( empty( $domain ) ) {
+		return new WP_Error( 'no_domain', __( 'Domain not specified', 'cabin-analytics-dashboard' ), array( 'status' => 400 ) );
+	}
+
+	$domain = trim( str_replace( array( 'http://', 'https://', 'www.' ), '', $domain ), '/' );
+
+	$start_date = $request->get_param( 'start_date' );
+	$end_date = $request->get_param( 'end_date' );
+
+	$cache_key = 'cabin_analytics_' . md5( $domain . $start_date . $end_date );
+	$cached_data = get_transient( $cache_key );
+	
+	if ( false !== $cached_data ) {
+		return rest_ensure_response( $cached_data );
+	}
+
+	$url = add_query_arg(
+		array(
+			'domain' => $domain,
+			'date_from' => $start_date,
+			'date_to' => $end_date,
+			'scope' => 'core',
+			'limit_lists' => 20,
+		),
+		'https://api.withcabin.com/v1/analytics'
+	);
+
+	$response = wp_remote_get(
+		$url,
+		array(
+			'headers' => array(
+				'x-api-key' => $api_key,
+			),
+			'timeout' => 15,
+			'user-agent' => 'WordPress Cabin Analytics Dashboard/' . CABIN_ANALYTICS_VERSION,
+		)
+	);
+
+	if ( is_wp_error( $response ) ) {
+		return new WP_Error(
+			'api_error',
+			sprintf(
+				/* translators: %s: Error message */
+				__( 'Failed to connect to Cabin Analytics: %s', 'cabin-analytics-dashboard' ),
+				$response->get_error_message()
+			),
+			array( 'status' => 500 )
+		);
+	}
+
+	$response_code = wp_remote_retrieve_response_code( $response );
+	$body = wp_remote_retrieve_body( $response );
+
+	if ( $response_code !== 200 ) {
+		$error_data = json_decode( $body, true );
+		$error_message = isset( $error_data['message'] ) ? $error_data['message'] : __( 'Unknown error from Cabin Analytics API', 'cabin-analytics-dashboard' );
+		
+		return new WP_Error(
+			'api_error',
+			sprintf(
+				/* translators: 1: HTTP status code 2: Error message */
+				__( 'Cabin Analytics API error (HTTP %1$d): %2$s', 'cabin-analytics-dashboard' ),
+				$response_code,
+				$error_message
+			),
+			array( 'status' => $response_code )
+		);
+	}
+
+	$data = json_decode( $body, true );
+
+	if ( json_last_error() !== JSON_ERROR_NONE ) {
+		return new WP_Error(
+			'json_error',
+			__( 'Failed to parse response from Cabin Analytics', 'cabin-analytics-dashboard' ),
+			array( 'status' => 500 )
+		);
+	}
+
+	set_transient( $cache_key, $data, 5 * MINUTE_IN_SECONDS );
+
+	return rest_ensure_response( $data );
+}
+
+/**
+ * Enqueue dashboard widget assets
+ */
+function cabin_analytics_dashboard_enqueue_assets() {
+	$asset_file_path = CABIN_ANALYTICS_PLUGIN_DIR . 'build/view.asset.php';
+	
+	if ( ! file_exists( $asset_file_path ) ) {
+		return;
+	}
+	
+	$asset_file = include( $asset_file_path );
+	
+	wp_register_script(
+		'cabin-analytics-dashboard-view',
+		CABIN_ANALYTICS_PLUGIN_URL . 'build/view.js',
+		$asset_file['dependencies'],
+		$asset_file['version'],
+		true
+	);
+	
+	wp_register_style(
+		'cabin-analytics-dashboard-style',
+		CABIN_ANALYTICS_PLUGIN_URL . 'build/style-index.css',
+		array(),
+		$asset_file['version']
+	);
+}
+add_action( 'admin_enqueue_scripts', 'cabin_analytics_dashboard_enqueue_assets' );
+add_action( 'wp_enqueue_scripts', 'cabin_analytics_dashboard_enqueue_assets' );
+
+/**
+ * Register dashboard widget
+ */
+function cabin_analytics_dashboard_add_widget() {
+	$options = get_option( 'cabin_analytics_dashboard_options' );
+	$api_key = isset( $options['api_key'] ) ? $options['api_key'] : '';
+	
+	if ( empty( $api_key ) ) {
+		return;
+	}
+
+	wp_add_dashboard_widget(
+		'cabin_analytics_dashboard_widget',
+		__( 'Cabin Analytics Dashboard', 'cabin-analytics-dashboard' ),
+		'cabin_analytics_dashboard_widget_render'
+	);
+}
+add_action( 'wp_dashboard_setup', 'cabin_analytics_dashboard_add_widget' );
+
+/**
+ * Render dashboard widget
+ */
+function cabin_analytics_dashboard_widget_render() {
+	$options = get_option( 'cabin_analytics_dashboard_options' );
+	$domain = isset( $options['domain'] ) ? $options['domain'] : '';
+	$chart_type = isset( $options['chart_type'] ) ? $options['chart_type'] : 'bar';
+	$date_range = isset( $options['date_range'] ) ? $options['date_range'] : '7';
+	$dashboard_url = isset( $options['dashboard_url'] ) && ! empty( $options['dashboard_url'] ) ? $options['dashboard_url'] : 'https://withcabin.com/dashboard/' . $domain;
+
+	wp_enqueue_script( 'cabin-analytics-dashboard-view' );
+	wp_enqueue_style( 'cabin-analytics-dashboard-style' );
+
+	printf(
+		'<div class="cabin-analytics-widget" data-domain="%s" data-chart-type="%s" data-date-range="%s" data-allow-switching="true" data-dashboard-url="%s"></div>',
+		esc_attr( $domain ),
+		esc_attr( $chart_type ),
+		esc_attr( $date_range ),
+		esc_url( $dashboard_url )
+	);
+}
+
+/**
+ * Register shortcode
+ */
+function cabin_analytics_dashboard_shortcode( $atts ) {
+	$options = get_option( 'cabin_analytics_dashboard_options' );
+	
+	$atts = shortcode_atts( array(
+		'domain' => isset( $options['domain'] ) ? $options['domain'] : '',
+		'chart_type' => isset( $options['chart_type'] ) ? $options['chart_type'] : 'bar',
+		'date_range' => isset( $options['date_range'] ) ? $options['date_range'] : '7',
+		'allow_switching' => 'true',
+		'dashboard_url' => isset( $options['dashboard_url'] ) && ! empty( $options['dashboard_url'] ) ? $options['dashboard_url'] : '',
+	), $atts, 'cabin_analytics' );
+
+	if ( empty( $atts['dashboard_url'] ) ) {
+		$atts['dashboard_url'] = 'https://withcabin.com/dashboard/' . $atts['domain'];
+	}
+
+	wp_enqueue_script( 'cabin-analytics-dashboard-view' );
+	wp_enqueue_style( 'cabin-analytics-dashboard-style' );
+
+	return sprintf(
+		'<div class="cabin-analytics-widget" data-domain="%s" data-chart-type="%s" data-date-range="%s" data-allow-switching="%s" data-dashboard-url="%s"></div>',
+		esc_attr( $atts['domain'] ),
+		esc_attr( $atts['chart_type'] ),
+		esc_attr( $atts['date_range'] ),
+		esc_attr( $atts['allow_switching'] ),
+		esc_url( $atts['dashboard_url'] )
+	);
+}
+add_shortcode( 'cabin_analytics', 'cabin_analytics_dashboard_shortcode' );]]></content>
+  </file>
+  <file path="src/block.json">
+    <description>This file contains metadata about the block including its name, title, category, icon, and other properties.</description>
+    <content><![CDATA[{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "cabin/analytics-dashboard",
+	"version": "0.1.0",
+	"title": "Cabin Analytics Dashboard",
+	"category": "widgets",
+	"icon": "chart-bar",
+	"description": "Display Cabin Analytics data with interactive charts",
+	"example": {},
+	"attributes": {
+		"domain": {
+			"type": "string",
+			"default": ""
+		},
+		"chartType": {
+			"type": "string",
+			"default": ""
+		},
+		"dateRange": {
+			"type": "string",
+			"default": ""
+		},
+		"allowSwitching": {
+			"type": "boolean",
+			"default": true
+		},
+		"dashboardUrl": {
+			"type": "string",
+			"default": ""
+		}
+	},
+	"supports": {
+		"html": false,
+		"align": true
+	},
+	"textdomain": "cabin-analytics-dashboard",
+	"editorScript": "file:./index.js",
+	"editorStyle": "file:./index.css",
+	"style": "file:./style-index.css",
+	"viewScript": "file:./view.js",
+	"render": "file:./render.php"
+}]]></content>
+  </file>
+  <file path="src/index.js">
+    <description>This file registers the block, specifies the edit and save functions, and loads the block's metadata</description>
+    <content><![CDATA[import { registerBlockType } from '@wordpress/blocks';
+import './style.scss';
+import Edit from './edit';
+import metadata from './block.json';
+
+registerBlockType( metadata.name, {
+	edit: Edit,
+} );
+]]></content>
+  </file>
+  <file path="src/edit.js">
+    <description>This file contains the edit function for the block which is responsible for rendering the block in the editor.</description>
+    <content><![CDATA[import { __ } from '@wordpress/i18n';
+import { useBlockProps, InspectorControls } from '@wordpress/block-editor';
+import { PanelBody, TextControl, SelectControl, ToggleControl, Placeholder } from '@wordpress/components';
+import { chartBar } from '@wordpress/icons';
+import { useEffect } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
+import './editor.scss';
+
+export default function Edit( { attributes, setAttributes } ) {
+	const { domain, chartType, dateRange, allowSwitching, dashboardUrl } = attributes;
+
+	useEffect( () => {
+		if ( ! domain ) {
+			apiFetch( { path: '/wp/v2/settings' } ).then( ( settings ) => {
+				const options = settings.cabin_analytics_dashboard_options;
+				if ( options && options.domain ) {
+					setAttributes( { domain: options.domain } );
+				}
+			} );
+		}
+	}, [] );
+
+	return (
+		<>
+			<InspectorControls>
+				<PanelBody title={ __( 'Analytics Settings', 'cabin-analytics-dashboard' ) }>
+					<TextControl
+						label={ __( 'Domain', 'cabin-analytics-dashboard' ) }
+						value={ domain }
+						onChange={ ( value ) => setAttributes( { domain: value } ) }
+						help={ __( 'Leave empty to use default from settings', 'cabin-analytics-dashboard' ) }
+						placeholder="example.com"
+					/>
+					<SelectControl
+						label={ __( 'Chart Type', 'cabin-analytics-dashboard' ) }
+						value={ chartType }
+						options={ [
+							{ label: __( 'Use Default', 'cabin-analytics-dashboard' ), value: '' },
+							{ label: __( 'Stacked Bar Chart', 'cabin-analytics-dashboard' ), value: 'bar' },
+							{ label: __( 'Line Chart', 'cabin-analytics-dashboard' ), value: 'line' },
+						] }
+						onChange={ ( value ) => setAttributes( { chartType: value } ) }
+					/>
+					<SelectControl
+						label={ __( 'Date Range', 'cabin-analytics-dashboard' ) }
+						value={ dateRange }
+						options={ [
+							{ label: __( 'Use Default', 'cabin-analytics-dashboard' ), value: '' },
+							{ label: __( 'Last 7 Days', 'cabin-analytics-dashboard' ), value: '7' },
+							{ label: __( 'Last 14 Days', 'cabin-analytics-dashboard' ), value: '14' },
+							{ label: __( 'Last 30 Days', 'cabin-analytics-dashboard' ), value: '30' },
+							{ label: __( 'Last 90 Days', 'cabin-analytics-dashboard' ), value: '90' },
+						] }
+						onChange={ ( value ) => setAttributes( { dateRange: value } ) }
+					/>
+					<ToggleControl
+						label={ __( 'Allow User Switching', 'cabin-analytics-dashboard' ) }
+						checked={ allowSwitching }
+						onChange={ ( value ) => setAttributes( { allowSwitching: value } ) }
+						help={ __( 'Allow visitors to change chart type and date range', 'cabin-analytics-dashboard' ) }
+					/>
+					<TextControl
+						label={ __( 'Dashboard URL', 'cabin-analytics-dashboard' ) }
+						value={ dashboardUrl }
+						onChange={ ( value ) => setAttributes( { dashboardUrl: value } ) }
+						help={ __( 'Custom link to Cabin dashboard. Leave empty for default: https://withcabin.com/dashboard/{domain}', 'cabin-analytics-dashboard' ) }
+						placeholder="https://withcabin.com/dashboard/example.com"
+					/>
+				</PanelBody>
+			</InspectorControls>
+			<div { ...useBlockProps() }>
+				<Placeholder
+					icon={ chartBar }
+					label={ __( 'Cabin Analytics Dashboard', 'cabin-analytics-dashboard' ) }
+					instructions={ __( 'This block will display your Cabin Analytics data. Configure settings in the sidebar.', 'cabin-analytics-dashboard' ) }
+				>
+					<div style={ { padding: '20px', textAlign: 'left', width: '100%' } }>
+						<p><strong>{ __( 'Current Settings:', 'cabin-analytics-dashboard' ) }</strong></p>
+						<ul style={ { margin: '10px 0', paddingLeft: '20px' } }>
+							<li>{ __( 'Domain:', 'cabin-analytics-dashboard' ) } { domain || __( 'Default', 'cabin-analytics-dashboard' ) }</li>
+							<li>{ __( 'Chart Type:', 'cabin-analytics-dashboard' ) } { chartType === 'bar' ? __( 'Bar', 'cabin-analytics-dashboard' ) : chartType === 'line' ? __( 'Line', 'cabin-analytics-dashboard' ) : __( 'Default', 'cabin-analytics-dashboard' ) }</li>
+							<li>{ __( 'Date Range:', 'cabin-analytics-dashboard' ) } { dateRange || __( 'Default', 'cabin-analytics-dashboard' ) }</li>
+							<li>{ __( 'User Switching:', 'cabin-analytics-dashboard' ) } { allowSwitching ? __( 'Enabled', 'cabin-analytics-dashboard' ) : __( 'Disabled', 'cabin-analytics-dashboard' ) }</li>
+							<li>{ __( 'Dashboard URL:', 'cabin-analytics-dashboard' ) } { dashboardUrl || __( 'Default', 'cabin-analytics-dashboard' ) }</li>
+						</ul>
+					</div>
+				</Placeholder>
+			</div>
+		</>
+	);
+}]]></content>
+  </file>
+  <file path="src/save.js">
+    <description>This file contains the save function for the block which is responsible for creating the static result of rendering the block on the client to display the saved result on the front end.</description>
+    <content><![CDATA[]]></content>
+  </file>
+  <file path="src/style.scss">
+    <description>This file contains styles for the block in the front end.</description>
+    <content><![CDATA[:root {
+	--cabin-widget-bg: #fff;
+	--cabin-border-color: #ddd;
+	--cabin-border-radius: 8px;
+	--cabin-padding: 24px;
+	--cabin-gap-xs: 4px;
+	--cabin-gap-sm: 8px;
+	--cabin-gap-md: 16px;
+	--cabin-gap-lg: 24px;
+	--cabin-text-primary: #1e1e1e;
+	--cabin-text-secondary: #555;
+	--cabin-text-tertiary: #666;
+	--cabin-bg-hover: #f5f5f5;
+	--cabin-bg-secondary: #f9f9f9;
+	--cabin-primary: #2271b1;
+	--cabin-primary-dark: #135e96;
+	--cabin-chart-line: #72aee6;
+	--cabin-chart-bar: #2271b1;
+	--cabin-error-bg: #fcf0f1;
+	--cabin-error-border: #e74c3c;
+	--cabin-error-text: #c0392b;
+	--cabin-grid-line: #e0e0e0;
+	--cabin-tooltip-bg: #1e1e1e;
+	--cabin-tooltip-text: #fff;
+	--cabin-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+	--cabin-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.2);
+	--cabin-transition: all 0.2s ease;
+	--cabin-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	--cabin-font-size-xs: 11px;
+	--cabin-font-size-sm: 12px;
+	--cabin-font-size-base: 14px;
+	--cabin-font-size-lg: 24px;
+	--cabin-font-size-xl: 32px;
+	--cabin-font-weight-normal: 400;
+	--cabin-font-weight-medium: 500;
+	--cabin-font-weight-semibold: 600;
+	--cabin-font-weight-bold: 700;
+	--cabin-border-radius-sm: 6px;
+	--cabin-spacing-sm: 12px;
+	--cabin-outline-width: 2px;
+	--cabin-outline-offset: -2px;
+	--cabin-outline-offset-external: 2px;
+	--cabin-icon-size: 16px;
+	--cabin-chart-height: 300px;
+	--cabin-chart-height-mobile: 250px;
+	--cabin-chart-min-height: 200px;
+	--cabin-stat-padding: 16px;
+	--cabin-tooltip-padding: 12px;
+	--cabin-tooltip-margin: 10px;
+	--cabin-button-padding-v: 8px;
+	--cabin-button-padding-h: 12px;
+	--cabin-color-indicator-size: 12px;
+	--cabin-letter-spacing: 0.5px;
+	--cabin-z-index-tooltip: 1000;
+	--cabin-button-active-bg: #2271b1;
+	--cabin-button-active-text: #fff;
+}
+
+.wp-block-cabin-analytics-dashboard {
+	margin: var(--cabin-gap-lg) 0;
+}
+
+.cabin-analytics-widget {
+	background: var(--cabin-widget-bg);
+	border: 1px solid var(--cabin-border-color);
+	border-radius: var(--cabin-border-radius);
+	padding: var(--cabin-padding);
+	font-family: var(--cabin-font-family);
+}
+
+.cabin-analytics-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: var(--cabin-gap-lg);
+	flex-wrap: wrap;
+	gap: var(--cabin-gap-md);
+}
+
+.cabin-analytics-title-wrapper {
+	display: flex;
+	flex-direction: column;
+	gap: var(--cabin-gap-xs);
+}
+
+.cabin-analytics-title {
+	font-size: var(--cabin-font-size-lg);
+	font-weight: var(--cabin-font-weight-semibold);
+	margin: 0;
+	color: var(--cabin-text-primary);
+}
+
+.cabin-analytics-domain {
+	font-size: var(--cabin-font-size-sm);
+	color: var(--cabin-text-tertiary);
+	text-transform: uppercase;
+	letter-spacing: var(--cabin-letter-spacing);
+}
+
+.cabin-analytics-controls {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--cabin-gap-sm);
+	width: 100%;
+	justify-content: space-between;
+}
+
+.cabin-analytics-button-group {
+	display: flex;
+	gap: 0;
+	border: 1px solid var(--cabin-border-color);
+	border-radius: var(--cabin-border-radius-sm);
+	overflow: hidden;
+}
+
+.cabin-analytics-button {
+	padding: var(--cabin-button-padding-v) var(--cabin-gap-md);
+	background: var(--cabin-widget-bg);
+	border: none;
+	border-right: 1px solid var(--cabin-border-color);
+	cursor: pointer;
+	font-size: var(--cabin-font-size-base);
+	font-weight: var(--cabin-font-weight-medium);
+	transition: var(--cabin-transition);
+	color: var(--cabin-text-secondary);
+
+	&:last-child {
+		border-right: none;
+	}
+
+	&:hover:not(.active) {
+		background: var(--cabin-bg-hover);
+	}
+
+	&:focus-visible {
+		outline: var(--cabin-outline-width) solid var(--cabin-primary);
+		outline-offset: var(--cabin-outline-offset);
+		z-index: 1;
+	}
+
+	&.active {
+		background: var(--cabin-button-active-bg);
+		color: var(--cabin-button-active-text);
+	}
+}
+
+.cabin-analytics-chart-toggle {
+	display: flex;
+	gap: 0;
+	border: 1px solid var(--cabin-border-color);
+	border-radius: var(--cabin-border-radius-sm);
+	overflow: hidden;
+	background: var(--cabin-widget-bg);
+}
+
+.cabin-analytics-chart-button {
+	padding: var(--cabin-button-padding-v) var(--cabin-button-padding-h);
+	background: var(--cabin-widget-bg);
+	border: none;
+	border-right: 1px solid var(--cabin-border-color);
+	cursor: pointer;
+	transition: var(--cabin-transition);
+	color: var(--cabin-text-secondary);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	&:last-child {
+		border-right: none;
+	}
+
+	&:hover:not(.active) {
+		background: var(--cabin-bg-hover);
+	}
+
+	&:focus-visible {
+		outline: var(--cabin-outline-width) solid var(--cabin-primary);
+		outline-offset: var(--cabin-outline-offset);
+		z-index: 1;
+	}
+
+	&.active {
+		background: var(--cabin-button-active-bg);
+		color: var(--cabin-button-active-text);
+	}
+
+	svg {
+		display: block;
+	}
+}
+
+.cabin-analytics-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: var(--cabin-gap-md);
+	margin-bottom: var(--cabin-gap-lg);
+}
+
+.cabin-analytics-stat {
+	padding: var(--cabin-stat-padding);
+	background: var(--cabin-bg-secondary);
+	border-radius: var(--cabin-border-radius-sm);
+}
+
+.cabin-analytics-stat-label {
+	font-size: var(--cabin-font-size-sm);
+	color: var(--cabin-text-tertiary);
+	text-transform: uppercase;
+	letter-spacing: var(--cabin-letter-spacing);
+	margin-bottom: var(--cabin-gap-sm);
+}
+
+.cabin-analytics-stat-value {
+	font-size: var(--cabin-font-size-xl);
+	font-weight: var(--cabin-font-weight-bold);
+	color: var(--cabin-text-primary);
+	margin: 0;
+}
+
+.cabin-analytics-chart-container {
+	position: relative;
+	height: var(--cabin-chart-height);
+	margin-top: var(--cabin-gap-lg);
+}
+
+.cabin-analytics-chart {
+	width: 100%;
+	height: 100%;
+}
+
+.cabin-analytics-footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: var(--cabin-gap-lg);
+	padding-top: var(--cabin-gap-lg);
+	border-top: 1px solid var(--cabin-grid-line);
+	flex-wrap: wrap;
+	gap: var(--cabin-spacing-sm);
+}
+
+.cabin-analytics-date-range {
+	font-size: var(--cabin-font-size-sm);
+	color: var(--cabin-text-tertiary);
+	text-transform: uppercase;
+	letter-spacing: var(--cabin-letter-spacing);
+}
+
+.cabin-analytics-dashboard-link {
+	font-size: var(--cabin-font-size-base);
+	color: var(--cabin-primary);
+	text-decoration: none;
+	font-weight: var(--cabin-font-weight-medium);
+	transition: var(--cabin-transition);
+
+	&:hover {
+		color: var(--cabin-primary-dark);
+		text-decoration: underline;
+	}
+
+	&:focus-visible {
+		outline: var(--cabin-outline-width) solid var(--cabin-primary);
+		outline-offset: var(--cabin-outline-offset-external);
+		border-radius: var(--cabin-outline-offset-external);
+	}
+}
+
+.cabin-analytics-loading {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: var(--cabin-chart-min-height);
+	color: var(--cabin-text-tertiary);
+	font-size: var(--cabin-font-size-base);
+}
+
+.cabin-analytics-error {
+	padding: var(--cabin-gap-md);
+	background: var(--cabin-error-bg);
+	border: 1px solid var(--cabin-error-border);
+	border-radius: var(--cabin-border-radius-sm);
+	color: var(--cabin-error-text);
+	margin-top: var(--cabin-gap-md);
+	role: alert;
+}
+
+.cabin-analytics-tooltip {
+	position: absolute;
+	background: var(--cabin-tooltip-bg);
+	color: var(--cabin-tooltip-text);
+	padding: var(--cabin-tooltip-padding);
+	border-radius: var(--cabin-border-radius-sm);
+	font-size: 13px;
+	pointer-events: none;
+	z-index: var(--cabin-z-index-tooltip);
+	box-shadow: var(--cabin-shadow-md);
+	
+	strong {
+		display: block;
+		margin-bottom: var(--cabin-gap-sm);
+		font-size: var(--cabin-font-size-base);
+		font-weight: var(--cabin-font-weight-semibold);
+	}
+
+	div {
+		margin: var(--cabin-gap-xs) 0;
+		display: flex;
+		align-items: center;
+		gap: var(--cabin-gap-sm);
+	}
+
+	.tooltip-color {
+		width: var(--cabin-color-indicator-size);
+		height: var(--cabin-color-indicator-size);
+		border-radius: var(--cabin-outline-offset-external);
+		display: inline-block;
+	}
+}
+
+.screen-reader-text {
+	clip: rect(1px, 1px, 1px, 1px);
+	clip-path: inset(50%);
+	height: 1px;
+	width: 1px;
+	margin: -1px;
+	overflow: hidden;
+	padding: 0;
+	position: absolute;
+}
+
+@media (max-width: 768px) {
+	.cabin-analytics-header {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.cabin-analytics-controls {
+		width: 100%;
+		justify-content: flex-start;
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.cabin-analytics-button-group,
+	.cabin-analytics-chart-toggle {
+		width: 100%;
+	}
+
+	.cabin-analytics-button,
+	.cabin-analytics-chart-button {
+		flex: 1;
+		justify-content: center;
+	}
+
+	.cabin-analytics-chart-container {
+		height: var(--cabin-chart-height-mobile);
+	}
+
+	.cabin-analytics-footer {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.cabin-analytics-stats {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	* {
+		transition: none !important;
+		animation: none !important;
+	}
+}]]></content>
+  </file>
+  <file path="src/editor.scss">
+    <description>This file contains styles for the block in the editor.</description>
+    <content><![CDATA[.wp-block-cabin-analytics-dashboard {
+	.components-placeholder {
+		min-height: 200px;
+		
+		.components-placeholder__label {
+			margin-bottom: 16px;
+		}
+
+		ul {
+			list-style-type: disc;
+		}
+
+		li {
+			margin: 4px 0;
+			color: #555;
+		}
+	}
+}
+]]></content>
+  </file>
+  <file path="src/view.js">
+    <description>This file contains the view function for the block which is responsible for rendering interactive behaviors of the block on the front end.</description>
+    <content><![CDATA[document.addEventListener('DOMContentLoaded', function() {
+	const widgets = document.querySelectorAll('.cabin-analytics-widget');
+	
+	widgets.forEach(widget => {
+		initializeWidget(widget);
+	});
+});
+
+function initializeWidget(container) {
+	const domain = container.dataset.domain;
+	const dashboardUrl = container.dataset.dashboardUrl || `https://withcabin.com/dashboard/${domain}`;
+	let chartType = container.dataset.chartType || 'bar';
+	let dateRange = parseInt(container.dataset.dateRange || '7');
+	const allowSwitching = container.dataset.allowSwitching !== 'false';
+
+	if (!domain) {
+		container.innerHTML = '<div class="cabin-analytics-error" role="alert">Domain not configured. Please set up your Cabin Analytics settings.</div>';
+		return;
+	}
+
+	let chartData = null;
+	let abortController = null;
+
+	function formatDate(date) {
+		return date.toLocaleDateString('en-CA');
+	}
+
+	function formatDateLabel(dateStr) {
+		const date = new Date(dateStr + 'T00:00:00');
+		return `${date.getMonth() + 1}/${date.getDate()}`;
+	}
+
+	function formatDateFull(dateStr) {
+		const date = new Date(dateStr + 'T00:00:00');
+		const options = { month: 'short', day: 'numeric', year: 'numeric' };
+		return date.toLocaleDateString('en-US', options);
+	}
+	
+	function escapeHtml(text) {
+		const div = document.createElement('div');
+		div.textContent = text;
+		return div.innerHTML;
+	}
+
+	function render() {
+		container.innerHTML = `
+			<div class="cabin-analytics-header">
+				<div class="cabin-analytics-title-wrapper">
+					<h2 class="cabin-analytics-title">Cabin Analytics Dashboard</h2>
+					<div class="cabin-analytics-domain" aria-label="Domain: ${escapeHtml(domain)}">${escapeHtml(domain)}</div>
+				</div>
+				${allowSwitching ? `
+					<div class="cabin-analytics-controls">
+						<div class="cabin-analytics-chart-toggle" role="group" aria-label="Chart type">
+							<button class="cabin-analytics-chart-button ${chartType === 'bar' ? 'active' : ''}" data-type="bar" aria-label="Bar Chart" aria-pressed="${chartType === 'bar'}">
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+									<rect x="4" y="12" width="4" height="8"/>
+									<rect x="10" y="8" width="4" height="12"/>
+									<rect x="16" y="4" width="4" height="16"/>
+								</svg>
+								<span class="screen-reader-text">Bar Chart</span>
+							</button>
+							<button class="cabin-analytics-chart-button ${chartType === 'line' ? 'active' : ''}" data-type="line" aria-label="Line Chart" aria-pressed="${chartType === 'line'}">
+								<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+									<polyline points="4 18 8 12 12 14 16 8 20 10"/>
+								</svg>
+								<span class="screen-reader-text">Line Chart</span>
+							</button>
+						</div>
+						<div class="cabin-analytics-button-group" role="group" aria-label="Date range">
+							<button class="cabin-analytics-button ${dateRange === 7 ? 'active' : ''}" data-range="7" aria-pressed="${dateRange === 7}">7d</button>
+							<button class="cabin-analytics-button ${dateRange === 14 ? 'active' : ''}" data-range="14" aria-pressed="${dateRange === 14}">14d</button>
+							<button class="cabin-analytics-button ${dateRange === 30 ? 'active' : ''}" data-range="30" aria-pressed="${dateRange === 30}">30d</button>
+							<button class="cabin-analytics-button ${dateRange === 90 ? 'active' : ''}" data-range="90" aria-pressed="${dateRange === 90}">90d</button>
+						</div>
+					</div>
+				` : ''}
+			</div>
+			<div class="cabin-analytics-loading" role="status" aria-live="polite">Loading analytics data...</div>
+		`;
+
+		if (allowSwitching) {
+			const rangeButtons = container.querySelectorAll('[data-range]');
+			rangeButtons.forEach(btn => {
+				btn.addEventListener('click', () => {
+					dateRange = parseInt(btn.dataset.range);
+					fetchData();
+				});
+			});
+
+			const chartButtons = container.querySelectorAll('[data-type]');
+			chartButtons.forEach(btn => {
+				btn.addEventListener('click', () => {
+					chartType = btn.dataset.type;
+					renderChart();
+				});
+			});
+		}
+
+		fetchData();
+	}
+
+	function fetchData() {
+		if (abortController) {
+			abortController.abort();
+		}
+		
+		abortController = new AbortController();
+		
+		const endDate = new Date();
+		const startDate = new Date();
+		startDate.setDate(endDate.getDate() - (dateRange - 1));
+
+		const startDateStr = formatDate(startDate);
+		const endDateStr = formatDate(endDate);
+
+		fetch(`/wp-json/cabin-analytics/v1/stats?domain=${encodeURIComponent(domain)}&start_date=${startDateStr}&end_date=${endDateStr}`, {
+			signal: abortController.signal
+		})
+			.then(response => {
+				if (!response.ok) {
+					throw new Error('Failed to fetch analytics data');
+				}
+				return response.json();
+			})
+			.then(data => {
+				chartData = processData(data, startDateStr, endDateStr);
+				renderChart();
+			})
+			.catch(error => {
+				if (error.name === 'AbortError') {
+					return;
+				}
+				container.innerHTML = `
+					<div class="cabin-analytics-header">
+						<div class="cabin-analytics-title-wrapper">
+							<h2 class="cabin-analytics-title">Cabin Analytics Dashboard</h2>
+							<div class="cabin-analytics-domain">${escapeHtml(domain)}</div>
+						</div>
+					</div>
+					<div class="cabin-analytics-error" role="alert">Error loading analytics: ${escapeHtml(error.message)}</div>
+				`;
+			});
+	}
+
+	function processData(data, startDate, endDate) {
+		if (!data || !data.daily_data || !Array.isArray(data.daily_data)) {
+			return { dates: [], pageviews: [], visitors: [], totalPageviews: 0, totalVisitors: 0, bounceRate: 0, startDate, endDate };
+		}
+
+		const dates = [];
+		const pageviews = [];
+		const visitors = [];
+
+		data.daily_data.forEach(day => {
+			if (day.timestamp && (day.page_views !== null || day.unique_visitors !== null)) {
+				const date = new Date(day.timestamp);
+				const year = date.getUTCFullYear();
+				const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+				const dayNum = String(date.getUTCDate()).padStart(2, '0');
+				const dateStr = `${year}-${month}-${dayNum}`;
+				
+				dates.push(dateStr);
+				pageviews.push(parseInt(day.page_views) || 0);
+				visitors.push(parseInt(day.unique_visitors) || 0);
+			}
+		});
+
+		const totalPageviews = data.summary?.page_views || 0;
+		const totalVisitors = data.summary?.unique_visitors || 0;
+		const bounceRate = data.summary?.bounce_rate || 0;
+
+		return { dates, pageviews, visitors, totalPageviews, totalVisitors, bounceRate, startDate, endDate };
+	}
+
+	function renderChart() {
+		if (!chartData) return;
+
+		const bounceRatePercent = ((1 - chartData.bounceRate) * 100).toFixed(1);
+
+		const statsHTML = `
+			<div class="cabin-analytics-stats">
+				<div class="cabin-analytics-stat">
+					<div class="cabin-analytics-stat-label" id="total-views-label">Total Views</div>
+					<div class="cabin-analytics-stat-value" aria-labelledby="total-views-label">${chartData.totalPageviews.toLocaleString()}</div>
+				</div>
+				<div class="cabin-analytics-stat">
+					<div class="cabin-analytics-stat-label" id="unique-visitors-label">Unique Visitors</div>
+					<div class="cabin-analytics-stat-value" aria-labelledby="unique-visitors-label">${chartData.totalVisitors.toLocaleString()}</div>
+				</div>
+				<div class="cabin-analytics-stat">
+					<div class="cabin-analytics-stat-label" id="bounce-rate-label">Bounce Rate</div>
+					<div class="cabin-analytics-stat-value" aria-labelledby="bounce-rate-label">${bounceRatePercent}%</div>
+				</div>
+			</div>
+		`;
+
+		const header = container.querySelector('.cabin-analytics-header').outerHTML;
+		
+		const footerHTML = `
+			<div class="cabin-analytics-footer">
+				<div class="cabin-analytics-date-range" role="status">
+					${formatDateFull(chartData.startDate)} - ${formatDateFull(chartData.endDate)}
+				</div>
+				${dashboardUrl ? `<a href="${escapeHtml(dashboardUrl)}" target="_blank" rel="noopener noreferrer" class="cabin-analytics-dashboard-link">Go to Dashboard →</a>` : ''}
+			</div>
+		`;
+		
+		container.innerHTML = header + statsHTML + '<div class="cabin-analytics-chart-container"><svg class="cabin-analytics-chart" role="img" aria-label="Analytics chart showing page views and unique visitors over time"></svg></div>' + footerHTML;
+
+		const svg = container.querySelector('.cabin-analytics-chart');
+		
+		if (chartType === 'bar') {
+			renderBarChart(svg, chartData);
+		} else {
+			renderLineChart(svg, chartData);
+		}
+
+		if (allowSwitching) {
+			const rangeButtons = container.querySelectorAll('[data-range]');
+			rangeButtons.forEach(btn => {
+				btn.addEventListener('click', () => {
+					dateRange = parseInt(btn.dataset.range);
+					
+					// Update active class and aria-pressed for all range buttons
+					rangeButtons.forEach(b => {
+						b.classList.remove('active');
+						b.setAttribute('aria-pressed', 'false');
+					});
+					btn.classList.add('active');
+					btn.setAttribute('aria-pressed', 'true');
+					
+					fetchData();
+				});
+			});
+
+			const chartButtons = container.querySelectorAll('[data-type]');
+			chartButtons.forEach(btn => {
+				btn.addEventListener('click', () => {
+					chartType = btn.dataset.type;
+					
+					// Update active class and aria-pressed for all chart type buttons
+					chartButtons.forEach(b => {
+						b.classList.remove('active');
+						b.setAttribute('aria-pressed', 'false');
+					});
+					btn.classList.add('active');
+					btn.setAttribute('aria-pressed', 'true');
+					
+					renderChart();
+				});
+			});
+		}
+	}
+
+	function renderBarChart(svg, data) {
+		const width = svg.clientWidth;
+		const height = svg.clientHeight;
+		const padding = { top: 20, right: 20, bottom: 40, left: 50 };
+		const chartWidth = width - padding.left - padding.right;
+		const chartHeight = height - padding.top - padding.bottom;
+
+		const maxValue = Math.max(...data.pageviews);
+		const barWidth = chartWidth / data.dates.length;
+
+		svg.innerHTML = '';
+		svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+		for (let i = 0; i <= 4; i++) {
+			const y = padding.top + (chartHeight / 4) * i;
+			const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+			line.setAttribute('x1', padding.left);
+			line.setAttribute('y1', y);
+			line.setAttribute('x2', width - padding.right);
+			line.setAttribute('y2', y);
+			line.setAttribute('stroke', '#e0e0e0');
+			line.setAttribute('stroke-width', '1');
+			svg.appendChild(line);
+
+			const value = Math.round(maxValue * (1 - i / 4));
+			const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+			text.setAttribute('x', padding.left - 10);
+			text.setAttribute('y', y + 4);
+			text.setAttribute('text-anchor', 'end');
+			text.setAttribute('font-size', '12');
+			text.setAttribute('fill', '#666');
+			text.textContent = value;
+			svg.appendChild(text);
+		}
+
+		data.dates.forEach((date, i) => {
+			const x = padding.left + i * barWidth;
+			const visitorsHeight = (data.visitors[i] / maxValue) * chartHeight;
+			const pageviewsHeight = (data.pageviews[i] / maxValue) * chartHeight;
+
+			const visitorsBar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+			visitorsBar.setAttribute('x', x + barWidth * 0.1);
+			visitorsBar.setAttribute('y', padding.top + chartHeight - visitorsHeight);
+			visitorsBar.setAttribute('width', barWidth * 0.8);
+			visitorsBar.setAttribute('height', visitorsHeight);
+			visitorsBar.setAttribute('fill', '#2271b1');
+			visitorsBar.setAttribute('rx', '2');
+			visitorsBar.style.cursor = 'pointer';
+			visitorsBar.setAttribute('role', 'button');
+			visitorsBar.setAttribute('tabindex', '0');
+			visitorsBar.setAttribute('aria-label', `${formatDateFull(date)}: ${data.visitors[i]} unique visitors, ${data.pageviews[i]} total views`);
+			svg.appendChild(visitorsBar);
+
+			const pageviewsBar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+			pageviewsBar.setAttribute('x', x + barWidth * 0.1);
+			pageviewsBar.setAttribute('y', padding.top + chartHeight - pageviewsHeight);
+			pageviewsBar.setAttribute('width', barWidth * 0.8);
+			pageviewsBar.setAttribute('height', pageviewsHeight - visitorsHeight);
+			pageviewsBar.setAttribute('fill', '#72aee6');
+			pageviewsBar.setAttribute('rx', '2');
+			pageviewsBar.style.cursor = 'pointer';
+			pageviewsBar.setAttribute('role', 'button');
+			pageviewsBar.setAttribute('tabindex', '0');
+			pageviewsBar.setAttribute('aria-label', `${formatDateFull(date)}: ${data.visitors[i]} unique visitors, ${data.pageviews[i]} total views`);
+			svg.appendChild(pageviewsBar);
+
+			if (i % Math.ceil(data.dates.length / 10) === 0) {
+				const dateLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+				dateLabel.setAttribute('x', x + barWidth / 2);
+				dateLabel.setAttribute('y', height - padding.bottom + 20);
+				dateLabel.setAttribute('text-anchor', 'middle');
+				dateLabel.setAttribute('font-size', '11');
+				dateLabel.setAttribute('fill', '#666');
+				dateLabel.textContent = formatDateLabel(date);
+				svg.appendChild(dateLabel);
+			}
+
+			[visitorsBar, pageviewsBar].forEach(bar => {
+				bar.addEventListener('mouseenter', (e) => {
+					showTooltip(e, date, data.pageviews[i], data.visitors[i]);
+				});
+				bar.addEventListener('mouseleave', hideTooltip);
+				bar.addEventListener('focus', (e) => {
+					showTooltip(e, date, data.pageviews[i], data.visitors[i]);
+				});
+				bar.addEventListener('blur', hideTooltip);
+				bar.addEventListener('keydown', (e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						showTooltip(e, date, data.pageviews[i], data.visitors[i]);
+					}
+				});
+			});
+		});
+	}
+
+	function renderLineChart(svg, data) {
+		const width = svg.clientWidth;
+		const height = svg.clientHeight;
+		const padding = { top: 20, right: 20, bottom: 40, left: 50 };
+		const chartWidth = width - padding.left - padding.right;
+		const chartHeight = height - padding.top - padding.bottom;
+
+		const maxValue = Math.max(...data.pageviews);
+
+		svg.innerHTML = '';
+		svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+		for (let i = 0; i <= 4; i++) {
+			const y = padding.top + (chartHeight / 4) * i;
+			const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+			line.setAttribute('x1', padding.left);
+			line.setAttribute('y1', y);
+			line.setAttribute('x2', width - padding.right);
+			line.setAttribute('y2', y);
+			line.setAttribute('stroke', '#e0e0e0');
+			line.setAttribute('stroke-width', '1');
+			svg.appendChild(line);
+
+			const value = Math.round(maxValue * (1 - i / 4));
+			const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+			text.setAttribute('x', padding.left - 10);
+			text.setAttribute('y', y + 4);
+			text.setAttribute('text-anchor', 'end');
+			text.setAttribute('font-size', '12');
+			text.setAttribute('fill', '#666');
+			text.textContent = value;
+			svg.appendChild(text);
+		}
+
+		const pointSpacing = chartWidth / (data.dates.length - 1);
+		const pageviewsPoints = data.pageviews.map((value, i) => {
+			const x = padding.left + i * pointSpacing;
+			const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
+			return `${x},${y}`;
+		});
+
+		const visitorsPoints = data.visitors.map((value, i) => {
+			const x = padding.left + i * pointSpacing;
+			const y = padding.top + chartHeight - (value / maxValue) * chartHeight;
+			return `${x},${y}`;
+		});
+
+		const pageviewsLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+		pageviewsLine.setAttribute('points', pageviewsPoints.join(' '));
+		pageviewsLine.setAttribute('fill', 'none');
+		pageviewsLine.setAttribute('stroke', '#72aee6');
+		pageviewsLine.setAttribute('stroke-width', '3');
+		pageviewsLine.setAttribute('stroke-linecap', 'round');
+		pageviewsLine.setAttribute('stroke-linejoin', 'round');
+		svg.appendChild(pageviewsLine);
+
+		const visitorsLine = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+		visitorsLine.setAttribute('points', visitorsPoints.join(' '));
+		visitorsLine.setAttribute('fill', 'none');
+		visitorsLine.setAttribute('stroke', '#2271b1');
+		visitorsLine.setAttribute('stroke-width', '3');
+		visitorsLine.setAttribute('stroke-linecap', 'round');
+		visitorsLine.setAttribute('stroke-linejoin', 'round');
+		svg.appendChild(visitorsLine);
+
+		data.dates.forEach((date, i) => {
+			const x = padding.left + i * pointSpacing;
+			
+			const pageviewsY = padding.top + chartHeight - (data.pageviews[i] / maxValue) * chartHeight;
+			const pageviewsCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+			pageviewsCircle.setAttribute('cx', x);
+			pageviewsCircle.setAttribute('cy', pageviewsY);
+			pageviewsCircle.setAttribute('r', '4');
+			pageviewsCircle.setAttribute('fill', '#72aee6');
+			pageviewsCircle.setAttribute('stroke', '#fff');
+			pageviewsCircle.setAttribute('stroke-width', '2');
+			pageviewsCircle.style.cursor = 'pointer';
+			pageviewsCircle.setAttribute('role', 'button');
+			pageviewsCircle.setAttribute('tabindex', '0');
+			pageviewsCircle.setAttribute('aria-label', `${formatDateFull(date)}: ${data.visitors[i]} unique visitors, ${data.pageviews[i]} total views`);
+			svg.appendChild(pageviewsCircle);
+
+			const visitorsY = padding.top + chartHeight - (data.visitors[i] / maxValue) * chartHeight;
+			const visitorsCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+			visitorsCircle.setAttribute('cx', x);
+			visitorsCircle.setAttribute('cy', visitorsY);
+			visitorsCircle.setAttribute('r', '4');
+			visitorsCircle.setAttribute('fill', '#2271b1');
+			visitorsCircle.setAttribute('stroke', '#fff');
+			visitorsCircle.setAttribute('stroke-width', '2');
+			visitorsCircle.style.cursor = 'pointer';
+			visitorsCircle.setAttribute('role', 'button');
+			visitorsCircle.setAttribute('tabindex', '0');
+			visitorsCircle.setAttribute('aria-label', `${formatDateFull(date)}: ${data.visitors[i]} unique visitors, ${data.pageviews[i]} total views`);
+			svg.appendChild(visitorsCircle);
+
+			if (i % Math.ceil(data.dates.length / 10) === 0) {
+				const dateLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+				dateLabel.setAttribute('x', x);
+				dateLabel.setAttribute('y', height - padding.bottom + 20);
+				dateLabel.setAttribute('text-anchor', 'middle');
+				dateLabel.setAttribute('font-size', '11');
+				dateLabel.setAttribute('fill', '#666');
+				dateLabel.textContent = formatDateLabel(date);
+				svg.appendChild(dateLabel);
+			}
+
+			[pageviewsCircle, visitorsCircle].forEach(circle => {
+				circle.addEventListener('mouseenter', (e) => {
+					showTooltip(e, date, data.pageviews[i], data.visitors[i]);
+					circle.setAttribute('r', '6');
+				});
+				circle.addEventListener('mouseleave', (e) => {
+					hideTooltip();
+					circle.setAttribute('r', '4');
+				});
+				circle.addEventListener('focus', (e) => {
+					showTooltip(e, date, data.pageviews[i], data.visitors[i]);
+					circle.setAttribute('r', '6');
+				});
+				circle.addEventListener('blur', (e) => {
+					hideTooltip();
+					circle.setAttribute('r', '4');
+				});
+				circle.addEventListener('keydown', (e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						showTooltip(e, date, data.pageviews[i], data.visitors[i]);
+					}
+				});
+			});
+		});
+	}
+
+	function showTooltip(event, date, pageviews, visitors) {
+		hideTooltip();
+		
+		const tooltip = document.createElement('div');
+		tooltip.className = 'cabin-analytics-tooltip';
+		tooltip.setAttribute('role', 'tooltip');
+		tooltip.innerHTML = `
+			<strong>${escapeHtml(formatDateFull(date))}</strong>
+			<div><span class="tooltip-color" style="background: #72aee6;" aria-hidden="true"></span> Total Views: ${pageviews.toLocaleString()}</div>
+			<div><span class="tooltip-color" style="background: #2271b1;" aria-hidden="true"></span> Unique Visitors: ${visitors.toLocaleString()}</div>
+		`;
+		
+		document.body.appendChild(tooltip);
+		
+		const rect = event.target.getBoundingClientRect();
+		tooltip.style.left = rect.left + window.scrollX + 'px';
+		tooltip.style.top = rect.top + window.scrollY - tooltip.offsetHeight - 10 + 'px';
+	}
+
+	function hideTooltip() {
+		const tooltip = document.querySelector('.cabin-analytics-tooltip');
+		if (tooltip) {
+			tooltip.remove();
+		}
+	}
+
+	render();
+}]]></content>
+  </file>
+  <file path="src/render.php">
+    <description>This file contains the render callback function for the block, which is responsible for rendering the block content on the front end.</description>
+    <content><![CDATA[<?php
+$options = get_option( 'cabin_analytics_dashboard_options' );
+$default_domain = isset( $options['domain'] ) ? $options['domain'] : '';
+$default_chart_type = isset( $options['chart_type'] ) ? $options['chart_type'] : 'bar';
+$default_date_range = isset( $options['date_range'] ) ? $options['date_range'] : '7';
+
+$domain = ! empty( $attributes['domain'] ) ? $attributes['domain'] : $default_domain;
+$chart_type = isset( $attributes['chartType'] ) && ! empty( $attributes['chartType'] ) ? $attributes['chartType'] : $default_chart_type;
+$date_range = isset( $attributes['dateRange'] ) && ! empty( $attributes['dateRange'] ) ? $attributes['dateRange'] : $default_date_range;
+$allow_switching = isset( $attributes['allowSwitching'] ) ? $attributes['allowSwitching'] : true;
+$dashboard_url = isset( $attributes['dashboardUrl'] ) && ! empty( $attributes['dashboardUrl'] ) ? $attributes['dashboardUrl'] : '';
+
+if ( empty( $dashboard_url ) ) {
+	$dashboard_url = 'https://withcabin.com/dashboard/' . $domain;
+}
+?>
+<div <?php echo get_block_wrapper_attributes(); ?>>
+	<div class="cabin-analytics-widget" 
+		data-domain="<?php echo esc_attr( $domain ); ?>" 
+		data-chart-type="<?php echo esc_attr( $chart_type ); ?>" 
+		data-date-range="<?php echo esc_attr( $date_range ); ?>"
+		data-allow-switching="<?php echo $allow_switching ? 'true' : 'false'; ?>"
+		data-dashboard-url="<?php echo esc_attr( $dashboard_url ); ?>">
+	</div>
+</div>]]></content>
+  </file>
+</artefact>

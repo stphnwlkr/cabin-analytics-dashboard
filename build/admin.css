@@ -1,0 +1,26 @@
+.cabin-admin-wrap {
+    padding: 3rem;
+    margin-block-start: 2rem;
+    background-color: white;
+    border: 1px solid
+ color-mix(in oklch, black 20%, transparent);
+    max-inline-size: 80ch;
+    font-size: 1rem;
+}
+.cabin-header-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.cabin-card{
+    padding: 2rem;
+    margin-block-start: 2rem;
+    background-color: white;
+    border: 1px solid
+ color-mix(in oklch, black 20%, transparent);
+    max-inline-size: 80ch;
+    font-size: 1rem;
+    border-radius:1.5rem;
+    corner-shape:squircle;
+}

@@ -1,4 +1,6 @@
 <?php
+defined( 'ABSPATH' ) || exit;
+
 $options = get_option( 'cabin_analytics_dashboard_options' );
 $default_domain = isset( $options['domain'] ) ? $options['domain'] : '';
 $default_chart_type = isset( $options['chart_type'] ) ? $options['chart_type'] : 'bar';
@@ -14,12 +16,12 @@ if ( empty( $dashboard_url ) ) {
 	$dashboard_url = 'https://withcabin.com/dashboard/' . $domain;
 }
 ?>
-<div <?php echo get_block_wrapper_attributes(); ?>>
+<div <?php echo wp_kses_data( get_block_wrapper_attributes() ); ?>>
 	<div class="cabin-analytics-widget" 
 		data-domain="<?php echo esc_attr( $domain ); ?>" 
 		data-chart-type="<?php echo esc_attr( $chart_type ); ?>" 
 		data-date-range="<?php echo esc_attr( $date_range ); ?>"
-		data-allow-switching="<?php echo $allow_switching ? 'true' : 'false'; ?>"
+		data-allow-switching="<?php echo esc_attr( $allow_switching ? 'true' : 'false' ); ?>"
 		data-dashboard-url="<?php echo esc_attr( $dashboard_url ); ?>">
 	</div>
 </div>

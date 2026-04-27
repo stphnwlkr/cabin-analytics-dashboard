@@ -1,10 +1,10 @@
 
 === Cabin Analytics Dashboard ===
 
-Contributors:      Stephen Walker, WordPress Telex
+Contributors:      Stephen Walker
 Tags:              block, analytics, cabin, dashboard, charts
-Tested up to:      6.9
-Stable tag:        1.0.1
+Tested up to:      7.0
+Stable tag:        1.2.0
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -13,9 +13,6 @@ Display beautiful analytics charts from Cabin Analytics with dashboard widgets, 
 == Description ==
 
 Cabin Analytics Dashboard seamlessly integrates Cabin Analytics into your WordPress site. This plugin provides multiple ways to display your site analytics:
-
-<img width="1212" height="766" alt="image" src="https://github.com/user-attachments/assets/02022d28-5fad-4158-a3dd-ccb1ed75fdce" />
-
 
 * **Dashboard Widget**: View your analytics directly in the WordPress admin dashboard
 * **Gutenberg Block**: Add analytics charts to any post or page using the block editor
@@ -95,7 +92,13 @@ This plugin uses the Cabin Analytics API v1 as documented at https://docs.withca
 
 == Changelog ==
 
-= 0.1.0 =
+= 1.2 =
+* Suppport for popular content
+* Reconciles paths to title
+* Date range and block title
+* Shortcode and GB Block
+
+= 1.0 =
 * Initial release
 * Dashboard widget integration
 * Gutenberg block with full customization

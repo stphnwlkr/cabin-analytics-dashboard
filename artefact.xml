@@ -4,10 +4,10 @@
     <content><![CDATA[
 === Cabin Analytics Dashboard ===
 
-Contributors:      Stephen Walker, WordPress Telex
+Contributors:      Stephen Walker
 Tags:              block, analytics, cabin, dashboard, charts
-Tested up to:      6.9
-Stable tag:        1.0.1
+Tested up to:      7.0
+Stable tag:        1.2
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,14 +95,24 @@ This plugin uses the Cabin Analytics API v1 as documented at https://docs.withca
 
 == Changelog ==
 
+= 1.2 =
+* Added Cabin Popular Content Gutenberg block
+* Added Popular Content shortcode
+* Added admin settings for Popular Content title and default date range
+* Added local path reconciliation for public WordPress post types
+* Updated compatibility testing through WordPress 7.0
+
+= 1.0.2 =
+* Updated plugin metadata and compatibility requirements
+
 = 1.0.0 =
 * Initial release
 * Dashboard widget integration
-* Gutenberg block with full customization
+* Gutenberg block with customization
 * Shortcode support
 * Admin settings page
-* Interactive chart switching (bar/line)
-* Multiple date range options (7, 14, 30, 90 days)
+* Interactive chart switching
+* Multiple date range options
 * API key management
 * Multi-domain support
 

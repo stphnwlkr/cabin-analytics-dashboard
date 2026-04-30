@@ -104,16 +104,6 @@ Popular Content supports `1`, `7`, `14`, `30`, and `90` day ranges. The default 
 
 This plugin uses the Cabin Analytics API v1 as documented at https://docs.withcabin.com/api
 
-== Screenshots ==
-
-1. Dashboard widget showing analytics data with interactive charts
-2. Standalone Cabin Popular Content dashboard widget with summary/detail metrics
-3. Block editor interface with customization options
-4. Admin settings page for global configuration
-5. Line chart view with date range selector
-6. Stacked bar chart showing unique visitors vs total visitors
-7. Popular Content block output
-
 == Changelog ==
 
 = 2.0 =

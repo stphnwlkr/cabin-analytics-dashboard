@@ -3,7 +3,7 @@
  * Plugin Name:       Cabin Analytics Dashboard
  * Plugin URI:        https://flyingw.press
  * Description:       Display Cabin Analytics data with interactive charts via dashboard widgets, blocks, and shortcodes.
- * Version:           1.2.0
+ * Version:           1.3
  * Requires at least: 6.8.3
  * Requires PHP:      8.1
  * Author:            Stephen Walker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CABIN_ANALYTICS_VERSION', '1.2.0' );
+define( 'CABIN_ANALYTICS_VERSION', '1.3' );
 define( 'CABIN_ANALYTICS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CABIN_ANALYTICS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -124,6 +124,8 @@ function cabin_analytics_dashboard_settings_init() {
 				'dashboard_url' => '',
 				'popular_content_title' => 'Top Pages',
 				'popular_content_date_range' => '30',
+				'dashboard_popular_content_enabled' => '0',
+				'dashboard_popular_content_date_range' => '30',
 			),
 		)
 	);
@@ -190,6 +192,22 @@ function cabin_analytics_dashboard_settings_init() {
 		'cabin_analytics_dashboard',
 		'cabin_analytics_dashboard_section'
 	);
+
+	add_settings_field(
+		'cabin_analytics_dashboard_popular_content_enabled',
+		__( 'Show Popular Content on Dashboard', 'cabin-analytics-dashboard' ),
+		'cabin_analytics_dashboard_popular_content_enabled_render',
+		'cabin_analytics_dashboard',
+		'cabin_analytics_dashboard_section'
+	);
+
+	add_settings_field(
+		'cabin_analytics_dashboard_popular_content_date_range',
+		__( 'Dashboard Popular Content Date Range', 'cabin-analytics-dashboard' ),
+		'cabin_analytics_dashboard_popular_content_date_range_render',
+		'cabin_analytics_dashboard',
+		'cabin_analytics_dashboard_section'
+	);
 }
 add_action( 'admin_init', 'cabin_analytics_dashboard_settings_init' );
 
@@ -227,6 +245,12 @@ function cabin_analytics_dashboard_sanitize_options( $input ) {
 		$sanitized['popular_content_date_range'] = $input['popular_content_date_range'];
 	}
 	
+	$sanitized["dashboard_popular_content_enabled"] = isset( $input["dashboard_popular_content_enabled"] ) ? "1" : "0";
+
+	if ( isset( $input["dashboard_popular_content_date_range"] ) && in_array( $input["dashboard_popular_content_date_range"], array( "1", "7", "14", "30", "90" ), true ) ) {
+		$sanitized["dashboard_popular_content_date_range"] = $input["dashboard_popular_content_date_range"];
+	}
+
 	return $sanitized;
 }
 
@@ -369,6 +393,53 @@ function cabin_analytics_popular_content_date_range_render() {
 				<path d="M12 16v-4M12 8h.01"/>
 			</svg>
 			<?php esc_html_e( 'Default range used by [cabin_popular_content] and the Popular Content block when no range is provided.', 'cabin-analytics-dashboard' ); ?>
+		</p>
+	</div>
+	<?php
+}
+
+/**
+ * Render dashboard popular content enabled field.
+ */
+function cabin_analytics_dashboard_popular_content_enabled_render() {
+	$options = get_option( 'cabin_analytics_dashboard_options' );
+	$enabled = isset( $options['dashboard_popular_content_enabled'] ) ? $options['dashboard_popular_content_enabled'] : '0';
+	?>
+	<div class="cabin-field-wrapper">
+		<label>
+			<input
+				type="checkbox"
+				name="cabin_analytics_dashboard_options[dashboard_popular_content_enabled]"
+				value="1"
+				<?php checked( $enabled, '1' ); ?>
+			/>
+			<?php esc_html_e( 'Display popular content in the WordPress dashboard widget.', 'cabin-analytics-dashboard' ); ?>
+		</label>
+	</div>
+	<?php
+}
+
+/**
+ * Render dashboard popular content date range field.
+ */
+function cabin_analytics_dashboard_popular_content_date_range_render() {
+	$options    = get_option( 'cabin_analytics_dashboard_options' );
+	$date_range = isset( $options['dashboard_popular_content_date_range'] ) ? $options['dashboard_popular_content_date_range'] : '30';
+	?>
+	<div class="cabin-field-wrapper">
+		<select name="cabin_analytics_dashboard_options[dashboard_popular_content_date_range]" class="cabin-select">
+			<option value="1" <?php selected( $date_range, '1' ); ?>><?php esc_html_e( 'Last 1 Day', 'cabin-analytics-dashboard' ); ?></option>
+			<option value="7" <?php selected( $date_range, '7' ); ?>><?php esc_html_e( 'Last 7 Days', 'cabin-analytics-dashboard' ); ?></option>
+			<option value="14" <?php selected( $date_range, '14' ); ?>><?php esc_html_e( 'Last 14 Days', 'cabin-analytics-dashboard' ); ?></option>
+			<option value="30" <?php selected( $date_range, '30' ); ?>><?php esc_html_e( 'Last 30 Days', 'cabin-analytics-dashboard' ); ?></option>
+			<option value="90" <?php selected( $date_range, '90' ); ?>><?php esc_html_e( 'Last 90 Days', 'cabin-analytics-dashboard' ); ?></option>
+		</select>
+		<p class="cabin-description">
+			<svg class="cabin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+				<circle cx="12" cy="12" r="10"/>
+				<path d="M12 16v-4M12 8h.01"/>
+			</svg>
+			<?php esc_html_e( 'Date range used for popular content inside the WordPress dashboard widget.', 'cabin-analytics-dashboard' ); ?>
 		</p>
 	</div>
 	<?php
@@ -681,6 +752,20 @@ function cabin_analytics_dashboard_widget_render() {
 		esc_attr( $date_range ),
 		esc_url( $dashboard_url )
 	);
+
+	$show_popular_content = isset( $options['dashboard_popular_content_enabled'] ) && '1' === $options['dashboard_popular_content_enabled'];
+
+	if ( $show_popular_content ) {
+		$popular_date_range = isset( $options['dashboard_popular_content_date_range'] ) ? $options['dashboard_popular_content_date_range'] : '30';
+
+		echo cabin_analytics_dashboard_render_popular_content(
+			array(
+				'qty'        => 10,
+				'date_range' => $popular_date_range,
+				'title'      => isset( $options['popular_content_title'] ) ? $options['popular_content_title'] : __( 'Top Pages', 'cabin-analytics-dashboard' ),
+			)
+		); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
 }
 
 /**

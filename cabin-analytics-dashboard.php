@@ -3,7 +3,7 @@
  * Plugin Name:       Cabin Analytics Dashboard
  * Plugin URI:        https://flyingw.press
  * Description:       Display Cabin Analytics data with interactive charts via dashboard widgets, blocks, and shortcodes.
- * Version:           1.2.0
+ * Version:           2.0
  * Requires at least: 6.8.3
  * Requires PHP:      8.1
  * Author:            Stephen Walker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CABIN_ANALYTICS_VERSION', '1.2.0' );
+define( 'CABIN_ANALYTICS_VERSION', '2.0' );
 define( 'CABIN_ANALYTICS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CABIN_ANALYTICS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -92,7 +92,7 @@ add_action( 'admin_menu', 'cabin_analytics_dashboard_add_admin_menu' );
  * Enqueue admin styles
  */
 function cabin_analytics_dashboard_admin_styles( $hook ) {
-	if ( 'settings_page_cabin-analytics-dashboard' !== $hook ) {
+	if ( 'settings_page_cabin-analytics-dashboard' !== $hook && 'index.php' !== $hook ) {
 		return;
 	}
 	
@@ -104,6 +104,18 @@ function cabin_analytics_dashboard_admin_styles( $hook ) {
 		array(),
 		$asset_file['version']
 	);
+
+	if ( 'index.php' === $hook ) {
+		$view_asset_file = CABIN_ANALYTICS_PLUGIN_DIR . 'build/view.asset.php';
+		$view_asset      = file_exists( $view_asset_file ) ? include $view_asset_file : array( 'version' => CABIN_ANALYTICS_VERSION );
+
+		wp_enqueue_style(
+			'cabin-analytics-dashboard-style',
+			CABIN_ANALYTICS_PLUGIN_URL . 'build/style-index.css',
+			array(),
+			isset( $view_asset['version'] ) ? $view_asset['version'] : CABIN_ANALYTICS_VERSION
+		);
+	}
 }
 add_action( 'admin_enqueue_scripts', 'cabin_analytics_dashboard_admin_styles' );
 
@@ -122,7 +134,7 @@ function cabin_analytics_dashboard_settings_init() {
 				'chart_type' => 'bar',
 				'date_range' => '7',
 				'dashboard_url' => '',
-				'popular_content_title' => 'Top Pages',
+				'popular_content_title' => 'Top Content',
 				'popular_content_date_range' => '30',
 			),
 		)
@@ -171,14 +183,6 @@ function cabin_analytics_dashboard_settings_init() {
 		'cabin_analytics_dashboard_url',
 		__( 'Default Dashboard URL', 'cabin-analytics-dashboard' ),
 		'cabin_analytics_dashboard_url_render',
-		'cabin_analytics_dashboard',
-		'cabin_analytics_dashboard_section'
-	);
-
-	add_settings_field(
-		'cabin_analytics_popular_content_title',
-		__( 'Popular Content Title', 'cabin-analytics-dashboard' ),
-		'cabin_analytics_popular_content_title_render',
 		'cabin_analytics_dashboard',
 		'cabin_analytics_dashboard_section'
 	);
@@ -329,31 +333,12 @@ function cabin_analytics_dashboard_url_render() {
  */
 
 /**
- * Render popular content title field.
- */
-function cabin_analytics_popular_content_title_render() {
-	$options = get_option( 'cabin_analytics_dashboard_options' );
-	$title   = isset( $options['popular_content_title'] ) && '' !== trim( $options['popular_content_title'] ) ? $options['popular_content_title'] : __( 'Top Pages', 'cabin-analytics-dashboard' );
-	?>
-	<div class="cabin-field-wrapper">
-		<input type="text" name="cabin_analytics_dashboard_options[popular_content_title]" value="<?php echo esc_attr( $title ); ?>" class="cabin-input" placeholder="<?php echo esc_attr__( 'Top Pages', 'cabin-analytics-dashboard' ); ?>" />
-		<p class="cabin-description">
-			<svg class="cabin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-				<circle cx="12" cy="12" r="10"/>
-				<path d="M12 16v-4M12 8h.01"/>
-			</svg>
-			<?php esc_html_e( 'Default heading used by the popular content shortcode and block.', 'cabin-analytics-dashboard' ); ?>
-		</p>
-	</div>
-	<?php
-}
-
-/**
  * Render popular content default date range field.
  */
 function cabin_analytics_popular_content_date_range_render() {
 	$options    = get_option( 'cabin_analytics_dashboard_options' );
 	$date_range = isset( $options['popular_content_date_range'] ) ? $options['popular_content_date_range'] : '30';
+
 	?>
 	<div class="cabin-field-wrapper">
 		<select name="cabin_analytics_dashboard_options[popular_content_date_range]" class="cabin-select">
@@ -447,7 +432,7 @@ function cabin_analytics_dashboard_options_page() {
 						<h4><?php esc_html_e( 'Popular Content Shortcode / Block', 'cabin-analytics-dashboard' ); ?></h4>
 						<code class="cabin-code">[cabin_popular_content]</code>
 						<p><?php esc_html_e( 'Optional overrides:', 'cabin-analytics-dashboard' ); ?></p>
-						<code class="cabin-code">[cabin_popular_content qty="10" date_range="30" title="Top Pages"]</code>
+						<code class="cabin-code">[cabin_popular_content qty="10" date_range="30" title="Top Content"]</code>
 					</div>
 				</div>
 
@@ -502,8 +487,163 @@ function cabin_analytics_dashboard_register_rest_routes() {
 			),
 		),
 	) );
+
+	register_rest_route( 'cabin-analytics/v1', '/popular-content', array(
+		'methods'             => 'GET',
+		'callback'            => 'cabin_analytics_dashboard_get_popular_content_rest',
+		'permission_callback' => function() {
+			return current_user_can( 'read' );
+		},
+		'args'                => array(
+			'qty'        => array(
+				'required'          => false,
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+			),
+			'date_range' => array(
+				'required'          => false,
+				'type'              => 'integer',
+				'sanitize_callback' => 'absint',
+			),
+		),
+	) );
 }
 add_action( 'rest_api_init', 'cabin_analytics_dashboard_register_rest_routes' );
+
+/**
+ * Return the allowed Popular Content date ranges.
+ *
+ * @return int[] Allowed date ranges in days.
+ */
+function cabin_analytics_dashboard_get_allowed_popular_ranges() {
+	return array( 1, 7, 14, 30, 90 );
+}
+
+/**
+ * REST callback for the standalone dashboard Popular Content widget.
+ *
+ * This keeps the WordPress Dashboard from blocking while Cabin data is fetched.
+ *
+ * @param WP_REST_Request $request REST request.
+ * @return WP_REST_Response
+ */
+function cabin_analytics_dashboard_get_popular_content_rest( $request ) {
+	$options    = get_option( 'cabin_analytics_dashboard_options' );
+	$qty        = absint( $request->get_param( 'qty' ) );
+	$date_range = absint( $request->get_param( 'date_range' ) );
+
+	if ( ! in_array( $qty, cabin_analytics_dashboard_get_allowed_popular_quantities(), true ) ) {
+		$qty = 10;
+	}
+
+	if ( ! in_array( $date_range, cabin_analytics_dashboard_get_allowed_popular_ranges(), true ) ) {
+		$date_range = isset( $options['popular_content_date_range'] ) ? absint( $options['popular_content_date_range'] ) : 30;
+	}
+
+	if ( ! in_array( $date_range, cabin_analytics_dashboard_get_allowed_popular_ranges(), true ) ) {
+		$date_range = 30;
+	}
+
+	$items = cabin_analytics_dashboard_get_popular_content( $qty, $date_range );
+
+	if ( is_wp_error( $items ) ) {
+		return rest_ensure_response(
+			array(
+				'success' => false,
+				'html'    => '<p class="cabin-popular-content__message">' . esc_html( $items->get_error_message() ) . '</p>',
+			)
+		);
+	}
+
+	return rest_ensure_response(
+		array(
+			'success' => true,
+			'html'    => cabin_analytics_dashboard_render_popular_content_dashboard_items( $items ),
+		)
+	);
+}
+
+/**
+ * Return the allowed dashboard Popular Content quantities.
+ *
+ * @return int[] Allowed quantities.
+ */
+function cabin_analytics_dashboard_get_allowed_popular_quantities() {
+	return array( 5, 10, 20, 50 );
+}
+
+/**
+ * Format a metric value for Popular Content output.
+ *
+ * @param mixed  $value Metric value.
+ * @param string $type  Metric type.
+ * @return string
+ */
+function cabin_analytics_dashboard_format_popular_metric( $value, $type = 'integer' ) {
+	if ( '' === $value || null === $value ) {
+		return '0';
+	}
+
+	if ( 'float' === $type ) {
+		$value = (float) $value;
+		return number_format_i18n( $value, 2 );
+	}
+
+	return number_format_i18n( (int) round( (float) $value ) );
+}
+
+/**
+ * Render dashboard Popular Content items.
+ *
+ * @param array $items Popular content items.
+ * @return string
+ */
+function cabin_analytics_dashboard_render_popular_content_dashboard_items( $items ) {
+	if ( empty( $items ) ) {
+		return '<p class="cabin-popular-content__message">' . esc_html__( 'No popular content was found for this date range.', 'cabin-analytics-dashboard' ) . '</p>';
+	}
+
+	ob_start();
+	?>
+	<ol class="cabin-popular-content__summary-list">
+		<?php foreach ( $items as $index => $item ) : ?>
+			<li class="cabin-popular-content__summary-item">
+				<details class="cabin-popular-content__details">
+					<summary class="cabin-popular-content__summary">
+						<span class="cabin-popular-content__summary-title">
+							<span class="cabin-popular-content__summary-number"><?php echo esc_html( (string) ( $index + 1 ) ); ?>.</span>
+							<span class="cabin-popular-content__summary-name"><?php echo esc_html( $item['title'] ); ?></span>
+						</span>
+						<span class="cabin-popular-content__summary-actions">
+							<span class="cabin-popular-content__summary-action"><?php esc_html_e( 'view details', 'cabin-analytics-dashboard' ); ?></span>
+							<a class="cabin-popular-content__summary-content-link" href="<?php echo esc_url( $item['url'] ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Visit %s', 'cabin-analytics-dashboard' ), $item['title'] ) ); ?>"><?php esc_html_e( 'view content', 'cabin-analytics-dashboard' ); ?></a>
+						</span>
+					</summary>
+					<dl class="cabin-popular-content__metrics">
+						<div class="cabin-popular-content__metric">
+							<dt class="cabin-popular-content__metric-label"><?php esc_html_e( 'Page views', 'cabin-analytics-dashboard' ); ?></dt>
+							<dd class="cabin-popular-content__metric-value"><?php echo esc_html( cabin_analytics_dashboard_format_popular_metric( $item['page_views'] ?? 0 ) ); ?></dd>
+						</div>
+						<div class="cabin-popular-content__metric">
+							<dt class="cabin-popular-content__metric-label"><?php esc_html_e( 'Unique visitors', 'cabin-analytics-dashboard' ); ?></dt>
+							<dd class="cabin-popular-content__metric-value"><?php echo esc_html( cabin_analytics_dashboard_format_popular_metric( $item['unique_visitors'] ?? 0 ) ); ?></dd>
+						</div>
+						<div class="cabin-popular-content__metric">
+							<dt class="cabin-popular-content__metric-label"><?php esc_html_e( 'Average duration seconds', 'cabin-analytics-dashboard' ); ?></dt>
+							<dd class="cabin-popular-content__metric-value"><?php echo esc_html( cabin_analytics_dashboard_format_popular_metric( $item['average_duration_seconds'] ?? 0 ) ); ?></dd>
+						</div>
+						<div class="cabin-popular-content__metric">
+							<dt class="cabin-popular-content__metric-label"><?php esc_html_e( 'CO2 grams', 'cabin-analytics-dashboard' ); ?></dt>
+							<dd class="cabin-popular-content__metric-value"><?php echo esc_html( cabin_analytics_dashboard_format_popular_metric( $item['co2_grams'] ?? 0, 'float' ) ); ?></dd>
+						</div>
+					</dl>
+				</details>
+			</li>
+		<?php endforeach; ?>
+	</ol>
+	<?php
+	return trim( ob_get_clean() );
+}
 
 /**
  * Validate date format
@@ -622,13 +762,17 @@ function cabin_analytics_dashboard_enqueue_assets() {
 		return;
 	}
 	
-	$asset_file = include( $asset_file_path );
+	$asset_file   = include( $asset_file_path );
+	$view_js_path = CABIN_ANALYTICS_PLUGIN_DIR . 'build/view.js';
+	$style_path   = CABIN_ANALYTICS_PLUGIN_DIR . 'build/style-index.css';
+	$script_ver   = file_exists( $view_js_path ) ? filemtime( $view_js_path ) : CABIN_ANALYTICS_VERSION;
+	$style_ver    = file_exists( $style_path ) ? filemtime( $style_path ) : CABIN_ANALYTICS_VERSION;
 	
 	wp_register_script(
 		'cabin-analytics-dashboard-view',
 		CABIN_ANALYTICS_PLUGIN_URL . 'build/view.js',
 		$asset_file['dependencies'],
-		$asset_file['version'],
+		$script_ver,
 		true
 	);
 	
@@ -636,11 +780,12 @@ function cabin_analytics_dashboard_enqueue_assets() {
 		'cabin-analytics-dashboard-style',
 		CABIN_ANALYTICS_PLUGIN_URL . 'build/style-index.css',
 		array(),
-		$asset_file['version']
+		$style_ver
 	);
 }
 add_action( 'admin_enqueue_scripts', 'cabin_analytics_dashboard_enqueue_assets' );
 add_action( 'wp_enqueue_scripts', 'cabin_analytics_dashboard_enqueue_assets' );
+
 
 /**
  * Register dashboard widget
@@ -658,6 +803,12 @@ function cabin_analytics_dashboard_add_widget() {
 		__( 'Cabin Analytics Dashboard', 'cabin-analytics-dashboard' ),
 		'cabin_analytics_dashboard_widget_render'
 	);
+
+	wp_add_dashboard_widget(
+		'cabin_analytics_popular_content_widget',
+		__( 'Cabin Popular Content', 'cabin-analytics-dashboard' ),
+		'cabin_analytics_dashboard_popular_content_widget_render'
+	);
 }
 add_action( 'wp_dashboard_setup', 'cabin_analytics_dashboard_add_widget' );
 
@@ -674,6 +825,22 @@ function cabin_analytics_dashboard_widget_render() {
 	wp_enqueue_script( 'cabin-analytics-dashboard-view' );
 	wp_enqueue_style( 'cabin-analytics-dashboard-style' );
 
+	echo '<style>
+		#cabin_analytics_dashboard_widget .inside { margin: 0; padding: 0; }
+		#cabin_analytics_dashboard_widget .cabin-analytics-title { color: var(--cabin-text-primary, #1e1e1e);font-size: 1.25rem;
+    font-weight: var(--cabin-font-weight-semibold, 600); }
+		#cabin_analytics_dashboard_widget .cabin-analytics-domain { font-weight: var(--cabin-font-weight-semibold, 600); }
+		#cabin_analytics_dashboard_widget .cabin-analytics-controls { align-items: center; display: flex; flex-wrap: wrap; width: 100%; gap: var(--cabin-gap-lg, 24px); justify-content: space-between; }
+		#cabin_analytics_dashboard_widget .cabin-dashboard-control { display: flex; flex-direction: column; gap: var(--cabin-gap-xs, 4px); }
+		#cabin_analytics_dashboard_widget .cabin-dashboard-control__label { color: var(--cabin-text-tertiary, #666); font-size: 10px; font-weight: var(--cabin-font-weight-medium, 500); letter-spacing: var(--cabin-letter-spacing, 0.5px); line-height: 1.2; text-transform: uppercase; }
+		#cabin_analytics_dashboard_widget .cabin-dashboard-control__button-group { border: 1px solid var(--cabin-border-color, #dcdcde); border-radius: var(--cabin-border-radius-sm, 6px); display: flex; overflow: hidden; }
+		#cabin_analytics_dashboard_widget .cabin-dashboard-control__button { background: var(--cabin-widget-bg, #fff); border: 0; border-right: 1px solid var(--cabin-border-color, #dcdcde); color: var(--cabin-text-secondary, #555); cursor: pointer; font-size: var(--cabin-font-size-base, 14px); font-weight: var(--cabin-font-weight-medium, 500); padding: var(--cabin-button-padding-v, 8px) var(--cabin-gap-md, 16px); transition: var(--cabin-transition, all 0.2s ease); }
+		#cabin_analytics_dashboard_widget .cabin-dashboard-control__button:last-child { border-right: 0; }
+		#cabin_analytics_dashboard_widget .cabin-dashboard-control__button:hover:not(.active) { background: var(--cabin-bg-hover, #f5f5f5); }
+		#cabin_analytics_dashboard_widget .cabin-dashboard-control__button:focus-visible { outline: var(--cabin-outline-width, 2px) solid var(--cabin-primary, #2271b1); outline-offset: var(--cabin-outline-offset, -2px); z-index: 1; }
+		#cabin_analytics_dashboard_widget .cabin-dashboard-control__button.active { background: var(--cabin-button-active-bg, #2271b1); color: var(--cabin-button-active-text, #fff); }
+	</style>';
+
 	printf(
 		'<div class="cabin-analytics-widget" data-domain="%s" data-chart-type="%s" data-date-range="%s" data-allow-switching="true" data-dashboard-url="%s"></div>',
 		esc_attr( $domain ),
@@ -681,46 +848,214 @@ function cabin_analytics_dashboard_widget_render() {
 		esc_attr( $date_range ),
 		esc_url( $dashboard_url )
 	);
+
 }
 
 /**
- * Register shortcode
+ * Render a reusable segmented control for dashboard widgets.
+ *
+ * @param array $args Control arguments.
+ * @return string
  */
-function cabin_analytics_dashboard_shortcode( $atts ) {
-	$options = get_option( 'cabin_analytics_dashboard_options' );
-	
-	$atts = shortcode_atts( array(
-		'domain' => isset( $options['domain'] ) ? $options['domain'] : '',
-		'chart_type' => isset( $options['chart_type'] ) ? $options['chart_type'] : 'bar',
-		'date_range' => isset( $options['date_range'] ) ? $options['date_range'] : '7',
-		'allow_switching' => 'true',
-		'dashboard_url' => isset( $options['dashboard_url'] ) && ! empty( $options['dashboard_url'] ) ? $options['dashboard_url'] : '',
-	), $atts, 'cabin_analytics' );
+function cabin_analytics_dashboard_render_segmented_control( $args ) {
+	$args = wp_parse_args(
+		$args,
+		array(
+			'label'       => '',
+			'group_label' => '',
+			'options'     => array(),
+			'active'      => '',
+			'data_attr'   => '',
+			'class'       => '',
+		)
+	);
 
-	if ( empty( $atts['dashboard_url'] ) ) {
-		$atts['dashboard_url'] = 'https://withcabin.com/dashboard/' . $atts['domain'];
+	$label       = sanitize_text_field( $args['label'] );
+	$group_label = sanitize_text_field( $args['group_label'] );
+	$options     = is_array( $args['options'] ) ? $args['options'] : array();
+	$active      = (string) $args['active'];
+	$data_attr   = preg_replace( '/[^a-zA-Z0-9_-]/', '', (string) $args['data_attr'] );
+	$class       = sanitize_html_class( (string) $args['class'] );
+	$label_id    = 'cabin-dashboard-control-' . wp_unique_id();
+
+	if ( '' === $label || empty( $options ) || '' === $data_attr ) {
+		return '';
 	}
 
-	wp_enqueue_script( 'cabin-analytics-dashboard-view' );
-	wp_enqueue_style( 'cabin-analytics-dashboard-style' );
-
-	return sprintf(
-		'<div class="cabin-analytics-widget" data-domain="%s" data-chart-type="%s" data-date-range="%s" data-allow-switching="%s" data-dashboard-url="%s"></div>',
-		esc_attr( $atts['domain'] ),
-		esc_attr( $atts['chart_type'] ),
-		esc_attr( $atts['date_range'] ),
-		esc_attr( $atts['allow_switching'] ),
-		esc_url( $atts['dashboard_url'] )
-	);
+	ob_start();
+	?>
+	<div class="cabin-dashboard-control <?php echo $class ? esc_attr( $class ) : ''; ?>">
+		<span id="<?php echo esc_attr( $label_id ); ?>" class="cabin-dashboard-control__label"><?php echo esc_html( $label ); ?></span>
+		<div class="cabin-dashboard-control__button-group" role="group" aria-labelledby="<?php echo esc_attr( $label_id ); ?>"<?php echo $group_label ? ' aria-label="' . esc_attr( $group_label ) . '"' : ''; ?>>
+			<?php foreach ( $options as $value => $text ) : ?>
+				<?php $is_active = (string) $value === $active; ?>
+				<button
+					class="cabin-dashboard-control__button <?php echo $is_active ? 'active' : ''; ?>"
+					type="button"
+					<?php echo esc_attr( $data_attr ); ?>="<?php echo esc_attr( $value ); ?>"
+					aria-pressed="<?php echo $is_active ? 'true' : 'false'; ?>"
+				>
+					<?php echo esc_html( $text ); ?>
+				</button>
+			<?php endforeach; ?>
+		</div>
+	</div>
+	<?php
+	return trim( ob_get_clean() );
 }
-add_shortcode( 'cabin_analytics', 'cabin_analytics_dashboard_shortcode' );
+
 /**
- * Get the allowed date ranges for popular content.
- *
- * @return int[]
+ * Render the standalone popular content dashboard widget.
  */
-function cabin_analytics_dashboard_get_allowed_popular_ranges() {
-	return array( 1, 7, 14, 30, 90 );
+function cabin_analytics_dashboard_popular_content_widget_render() {
+	$options    = get_option( 'cabin_analytics_dashboard_options' );
+	$domain     = isset( $options['domain'] ) ? trim( $options['domain'] ) : '';
+	$date_range = isset( $options['popular_content_date_range'] ) && in_array( (string) $options['popular_content_date_range'], array( '1', '7', '14', '30', '90' ), true ) ? absint( $options['popular_content_date_range'] ) : 30;
+	$qty        = 10;
+	$target_id  = 'cabin-popular-content-dashboard-' . wp_rand( 1000, 9999 );
+	$nonce      = wp_create_nonce( 'wp_rest' );
+	$rest_url   = rest_url( 'cabin-analytics/v1/popular-content' );
+
+	$date_range_options = array();
+	foreach ( cabin_analytics_dashboard_get_allowed_popular_ranges() as $range ) {
+		$date_range_options[ $range ] = $range . 'd';
+	}
+
+	$quantity_options = array();
+	foreach ( cabin_analytics_dashboard_get_allowed_popular_quantities() as $quantity ) {
+		$quantity_options[ $quantity ] = (string) $quantity;
+	}
+
+	wp_enqueue_style( 'cabin-analytics-dashboard-style' );
+	?>
+	<style>
+		#cabin_analytics_popular_content_widget .inside { margin: 0; padding: 0; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content-dashboard { background: var(--cabin-widget-bg, #fff); border: 1px solid var(--cabin-border-color, #dcdcde); border-radius: var(--cabin-border-radius, 8px); font-family: var(--cabin-font-family, inherit); padding: var(--cabin-padding, 24px); }
+		#cabin_analytics_popular_content_widget .cabin-popular-content-dashboard__header { align-items: flex-start; display: flex; flex-wrap: wrap; gap: var(--cabin-gap-lg, 24px); justify-content: space-between; margin-bottom: var(--cabin-gap-lg, 24px); }
+		#cabin_analytics_popular_content_widget .cabin-popular-content-dashboard__title-wrapper { display: flex; flex-direction: column; gap: var(--cabin-gap-xs, 4px); }
+		#cabin_analytics_popular_content_widget .cabin-popular-content-dashboard__title { color: var(--cabin-text-primary, #1e1e1e); font-size: 1.25rem; font-weight: var(--cabin-font-weight-semibold, 600); line-height: 1.2; margin: 0; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content-dashboard__domain { color: var(--cabin-text-tertiary, #666); font-size: var(--cabin-font-size-sm, 12px); font-weight: var(--cabin-font-weight-semibold, 600); letter-spacing: var(--cabin-letter-spacing, 0.5px); text-transform: uppercase; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content-dashboard__controls { align-items: center; display: flex; flex-wrap: wrap; width: 100%; gap: var(--cabin-gap-lg, 24px); justify-content: space-between; }
+		#cabin_analytics_popular_content_widget .cabin-dashboard-control { display: flex; flex-direction: column; gap: var(--cabin-gap-xs, 4px); }
+		#cabin_analytics_popular_content_widget .cabin-dashboard-control__label { color: var(--cabin-text-tertiary, #666); font-size: 10px; font-weight: var(--cabin-font-weight-medium, 500); letter-spacing: var(--cabin-letter-spacing, 0.5px); line-height: 1.2; text-transform: uppercase; }
+		#cabin_analytics_popular_content_widget .cabin-dashboard-control__button-group { border: 1px solid var(--cabin-border-color, #dcdcde); border-radius: var(--cabin-border-radius-sm, 6px); display: flex; overflow: hidden; }
+		#cabin_analytics_popular_content_widget .cabin-dashboard-control__button { background: var(--cabin-widget-bg, #fff); border: 0; border-right: 1px solid var(--cabin-border-color, #dcdcde); color: var(--cabin-text-secondary, #555); cursor: pointer; font-size: var(--cabin-font-size-base, 14px); font-weight: var(--cabin-font-weight-medium, 500); padding: var(--cabin-button-padding-v, 8px) var(--cabin-gap-md, 16px); transition: var(--cabin-transition, all 0.2s ease); }
+		#cabin_analytics_popular_content_widget .cabin-dashboard-control__button:last-child { border-right: 0; }
+		#cabin_analytics_popular_content_widget .cabin-dashboard-control__button:hover:not(.active) { background: var(--cabin-bg-hover, #f5f5f5); }
+		#cabin_analytics_popular_content_widget .cabin-dashboard-control__button:focus-visible { outline: var(--cabin-outline-width, 2px) solid var(--cabin-primary, #2271b1); outline-offset: var(--cabin-outline-offset, -2px); z-index: 1; }
+		#cabin_analytics_popular_content_widget .cabin-dashboard-control__button.active { background: var(--cabin-button-active-bg, #2271b1); color: var(--cabin-button-active-text, #fff); }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__summary-list { display: grid; gap: var(--cabin-gap-sm, 8px); list-style: none; margin: 0; padding: 0; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__summary-item { margin: 0; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__details { border-bottom: 1px solid var(--cabin-grid-line, #e0e0e0); padding: var(--cabin-gap-sm, 8px) 0; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__summary { align-items: center; cursor: pointer; display: flex; gap: var(--cabin-gap-md, 16px); justify-content: space-between; list-style: none; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__summary::-webkit-details-marker { display: none; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__summary-title { align-items: baseline; display: flex; gap: var(--cabin-gap-sm, 8px); min-width: 0; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__summary-number, #cabin_analytics_popular_content_widget .cabin-popular-content__summary-name { font-size: 1rem; font-weight: var(--cabin-font-weight-semibold, 600); line-height: 1.2; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__summary-name { color: var(--cabin-text-primary, #1e1e1e); }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__summary-actions { align-items: center; display: flex; gap: var(--cabin-gap-sm, 8px); white-space: nowrap; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__summary-content-link { color: var(--cabin-primary, #2271b1); font-size: var(--cabin-font-size-base, 14px); text-decoration: none; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__summary-content-link:hover, #cabin_analytics_popular_content_widget .cabin-popular-content__summary-content-link:focus-visible { text-decoration: underline; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__summary-action { color: var(--cabin-text-primary, #1e1e1e); font-size: var(--cabin-font-size-base, 14px); }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__metrics { display: grid; gap: var(--cabin-gap-sm, 8px); grid-template-columns: repeat(4, minmax(0, 1fr)); margin: var(--cabin-gap-md, 16px) 0 0; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__metric { background: var(--cabin-bg-secondary, #f9f9f9); border-radius: var(--cabin-border-radius-sm, 6px); padding: var(--cabin-spacing-sm, 12px); }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__metric-label { color: var(--cabin-text-tertiary, #666); font-size: 10px; letter-spacing: var(--cabin-letter-spacing, 0.5px); line-height: 1.2; margin: 0 0 var(--cabin-gap-xs, 4px); text-transform: uppercase; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__metric-value { color: var(--cabin-text-primary, #1e1e1e); font-size: 16px; font-weight: 500; line-height: 1.2; margin: 0; }
+		#cabin_analytics_popular_content_widget .cabin-popular-content__message { color: var(--cabin-text-tertiary, #666); font-size: var(--cabin-font-size-base, 14px); margin: 0; }
+		@media (max-width: 782px) { #cabin_analytics_popular_content_widget .cabin-popular-content-dashboard__header, #cabin_analytics_popular_content_widget .cabin-popular-content-dashboard__controls { align-items: stretch; flex-direction: column; } #cabin_analytics_popular_content_widget .cabin-dashboard-control__button-group { width: 100%; } #cabin_analytics_popular_content_widget .cabin-dashboard-control__button { flex: 1; } #cabin_analytics_popular_content_widget .cabin-popular-content__summary { align-items: flex-start; flex-direction: column; } #cabin_analytics_popular_content_widget .cabin-popular-content__metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+	</style>
+	<div class="cabin-popular-content-dashboard" data-cabin-dashboard-popular-content>
+		<div class="cabin-popular-content-dashboard__header">
+			<div class="cabin-popular-content-dashboard__title-wrapper">
+				<h2 class="cabin-popular-content-dashboard__title"><?php esc_html_e( 'Cabin Analytics Popular Content', 'cabin-analytics-dashboard' ); ?></h2>
+				<?php if ( '' !== $domain ) : ?>
+					<div class="cabin-popular-content-dashboard__domain" aria-label="<?php echo esc_attr( sprintf( __( 'Domain: %s', 'cabin-analytics-dashboard' ), $domain ) ); ?>"><?php echo esc_html( $domain ); ?></div>
+				<?php endif; ?>
+			</div>
+			<div class="cabin-popular-content-dashboard__controls">
+				<?php
+				echo cabin_analytics_dashboard_render_segmented_control(
+					array(
+						'label'       => __( 'Date range', 'cabin-analytics-dashboard' ),
+						'group_label' => __( 'Select popular content date range', 'cabin-analytics-dashboard' ),
+						'options'     => $date_range_options,
+						'active'      => $date_range,
+						'data_attr'   => 'data-cabin-popular-range',
+						'class'       => 'cabin-dashboard-control--date-range',
+					)
+				); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				echo cabin_analytics_dashboard_render_segmented_control(
+					array(
+						'label'       => __( 'Records to show', 'cabin-analytics-dashboard' ),
+						'group_label' => __( 'Select number of records to show', 'cabin-analytics-dashboard' ),
+						'options'     => $quantity_options,
+						'active'      => $qty,
+						'data_attr'   => 'data-cabin-popular-qty',
+						'class'       => 'cabin-dashboard-control--quantity',
+					)
+				); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				?>
+			</div>
+		</div>
+		<div id="<?php echo esc_attr( $target_id ); ?>" class="cabin-popular-content-dashboard__body" aria-live="polite">
+			<p class="cabin-popular-content__message"><?php esc_html_e( 'Loading popular content…', 'cabin-analytics-dashboard' ); ?></p>
+		</div>
+	</div>
+	<script>
+		(function() {
+			const widget = document.querySelector('[data-cabin-dashboard-popular-content]');
+			const target = document.getElementById(<?php echo wp_json_encode( $target_id ); ?>);
+			const restUrl = <?php echo wp_json_encode( esc_url_raw( $rest_url ) ); ?>;
+			const nonce = <?php echo wp_json_encode( $nonce ); ?>;
+			let dateRange = <?php echo wp_json_encode( $date_range ); ?>;
+			let qty = <?php echo wp_json_encode( $qty ); ?>;
+
+			if (!widget || !target) { return; }
+
+			target.addEventListener('click', (event) => {
+				if (event.target.closest('.cabin-popular-content__summary-content-link')) { event.stopPropagation(); }
+			});
+
+			function setActive(selector, value) {
+				widget.querySelectorAll(selector).forEach((button) => {
+					const buttonValue = button.dataset.cabinPopularRange || button.dataset.cabinPopularQty;
+					const isActive = String(buttonValue) === String(value);
+					button.classList.toggle('active', isActive);
+					button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+				});
+			}
+
+			function loadPopularContent() {
+				const url = new URL(restUrl);
+				url.searchParams.set('date_range', dateRange);
+				url.searchParams.set('qty', qty);
+				target.innerHTML = '<p class="cabin-popular-content__message"><?php echo esc_js( __( 'Loading popular content…', 'cabin-analytics-dashboard' ) ); ?></p>';
+
+				fetch(url.toString(), { credentials: 'same-origin', headers: { 'X-WP-Nonce': nonce } })
+					.then((response) => response.json())
+					.then((data) => { target.innerHTML = data && data.html ? data.html : '<p class="cabin-popular-content__message"><?php echo esc_js( __( 'Popular content could not be loaded.', 'cabin-analytics-dashboard' ) ); ?></p>'; })
+					.catch(() => { target.innerHTML = '<p class="cabin-popular-content__message"><?php echo esc_js( __( 'Popular content could not be loaded.', 'cabin-analytics-dashboard' ) ); ?></p>'; });
+			}
+
+			widget.querySelectorAll('[data-cabin-popular-range]').forEach((button) => {
+				button.addEventListener('click', () => {
+					dateRange = parseInt(button.dataset.cabinPopularRange, 10);
+					setActive('[data-cabin-popular-range]', dateRange);
+					loadPopularContent();
+				});
+			});
+
+			widget.querySelectorAll('[data-cabin-popular-qty]').forEach((button) => {
+				button.addEventListener('click', () => {
+					qty = parseInt(button.dataset.cabinPopularQty, 10);
+					setActive('[data-cabin-popular-qty]', qty);
+					loadPopularContent();
+				});
+			});
+
+			loadPopularContent();
+		})();
+	</script>
+	<?php
 }
 
 /**
@@ -899,13 +1234,15 @@ function cabin_analytics_dashboard_get_popular_content( $qty = 10, $date_range =
 		$seen[ $post->ID ] = true;
 
 		$items[] = array(
-			'id'              => $post->ID,
-			'title'           => get_the_title( $post ),
-			'url'             => get_permalink( $post ),
-			'post_type'       => get_post_type( $post ),
-			'path'            => cabin_analytics_dashboard_normalize_path( $page['path'] ),
-			'page_views'      => isset( $page['page_views'] ) ? absint( $page['page_views'] ) : 0,
-			'unique_visitors' => isset( $page['unique_visitors'] ) ? absint( $page['unique_visitors'] ) : 0,
+			'id'                       => $post->ID,
+			'title'                    => get_the_title( $post ),
+			'url'                      => get_permalink( $post ),
+			'post_type'                => get_post_type( $post ),
+			'path'                     => cabin_analytics_dashboard_normalize_path( $page['path'] ),
+			'page_views'               => isset( $page['page_views'] ) ? absint( $page['page_views'] ) : 0,
+			'unique_visitors'          => isset( $page['unique_visitors'] ) ? absint( $page['unique_visitors'] ) : 0,
+			'average_duration_seconds' => isset( $page['average_duration_seconds'] ) ? (float) $page['average_duration_seconds'] : 0,
+			'co2_grams'                => isset( $page['co2_grams'] ) ? (float) $page['co2_grams'] : 0,
 		);
 
 		if ( count( $items ) >= $qty ) {
@@ -926,7 +1263,7 @@ function cabin_analytics_dashboard_get_popular_content( $qty = 10, $date_range =
  */
 function cabin_analytics_dashboard_render_popular_content( $args = array() ) {
 	$options            = get_option( 'cabin_analytics_dashboard_options' );
-	$default_title      = isset( $options['popular_content_title'] ) && '' !== trim( $options['popular_content_title'] ) ? $options['popular_content_title'] : __( 'Top Pages', 'cabin-analytics-dashboard' );
+	$default_title      = isset( $options['popular_content_title'] ) && '' !== trim( $options['popular_content_title'] ) ? $options['popular_content_title'] : __( 'Top Content', 'cabin-analytics-dashboard' );
 	$default_date_range = isset( $options['popular_content_date_range'] ) && in_array( (string) $options['popular_content_date_range'], array( '1', '7', '14', '30', '90' ), true ) ? $options['popular_content_date_range'] : '30';
 
 	$args = wp_parse_args(
@@ -977,16 +1314,67 @@ function cabin_analytics_dashboard_render_popular_content( $args = array() ) {
 }
 
 /**
+ * Render Cabin Analytics chart shortcode.
+ *
+ * Usage: [cabin_analytics domain="example.com" chart_type="line" date_range="30" allow_switching="true"]
+ *
+ * @param array $atts Shortcode attributes.
+ * @return string
+ */
+function cabin_analytics_dashboard_chart_shortcode( $atts ) {
+	$options = get_option( 'cabin_analytics_dashboard_options' );
+
+	$atts = shortcode_atts(
+		array(
+			'domain'          => isset( $options['domain'] ) ? $options['domain'] : '',
+			'chart_type'      => isset( $options['chart_type'] ) ? $options['chart_type'] : 'bar',
+			'date_range'      => isset( $options['date_range'] ) ? $options['date_range'] : '7',
+			'allow_switching' => 'true',
+			'dashboard_url'   => '',
+		),
+		$atts,
+		'cabin_analytics'
+	);
+
+	$domain          = sanitize_text_field( $atts['domain'] );
+	$chart_type      = in_array( $atts['chart_type'], array( 'bar', 'line' ), true ) ? $atts['chart_type'] : 'bar';
+	$date_range      = in_array( (string) $atts['date_range'], array( '7', '14', '30', '90' ), true ) ? (string) $atts['date_range'] : '7';
+	$allow_switching = filter_var( $atts['allow_switching'], FILTER_VALIDATE_BOOLEAN ) ? 'true' : 'false';
+	$dashboard_url   = '' !== $atts['dashboard_url'] ? esc_url_raw( $atts['dashboard_url'] ) : '';
+
+	if ( '' === $domain ) {
+		return '<p class="cabin-analytics-error">' . esc_html__( 'Cabin Analytics domain is not configured.', 'cabin-analytics-dashboard' ) . '</p>';
+	}
+
+	if ( '' === $dashboard_url ) {
+		$dashboard_url = 'https://withcabin.com/dashboard/' . $domain;
+	}
+
+	wp_enqueue_script( 'cabin-analytics-dashboard-view' );
+	wp_enqueue_style( 'cabin-analytics-dashboard-style' );
+
+	return sprintf(
+		'<div class="cabin-analytics-widget" data-domain="%s" data-chart-type="%s" data-date-range="%s" data-allow-switching="%s" data-dashboard-url="%s"></div>',
+		esc_attr( $domain ),
+		esc_attr( $chart_type ),
+		esc_attr( $date_range ),
+		esc_attr( $allow_switching ),
+		esc_url( $dashboard_url )
+	);
+}
+add_shortcode( 'cabin_analytics', 'cabin_analytics_dashboard_chart_shortcode' );
+
+/**
  * Render popular content shortcode.
  *
- * Usage: [cabin_popular_content qty="10" date_range="30" title="Top Pages"]
+ * Usage: [cabin_popular_content qty="10" date_range="30" title="Top Content"]
  *
  * @param array $atts Shortcode attributes.
  * @return string
  */
 function cabin_analytics_dashboard_popular_content_shortcode( $atts ) {
 	$options            = get_option( 'cabin_analytics_dashboard_options' );
-	$default_title      = isset( $options['popular_content_title'] ) && '' !== trim( $options['popular_content_title'] ) ? $options['popular_content_title'] : __( 'Top Pages', 'cabin-analytics-dashboard' );
+	$default_title      = isset( $options['popular_content_title'] ) && '' !== trim( $options['popular_content_title'] ) ? $options['popular_content_title'] : __( 'Top Content', 'cabin-analytics-dashboard' );
 	$default_date_range = isset( $options['popular_content_date_range'] ) && in_array( (string) $options['popular_content_date_range'], array( '1', '7', '14', '30', '90' ), true ) ? $options['popular_content_date_range'] : '30';
 
 	$atts = shortcode_atts(

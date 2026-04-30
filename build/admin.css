@@ -2,25 +2,120 @@
     padding: 3rem;
     margin-block-start: 2rem;
     background-color: white;
-    border: 1px solid
- color-mix(in oklch, black 20%, transparent);
+    border: 1px solid color-mix(in oklch, black 20%, transparent);
     max-inline-size: 80ch;
     font-size: 1rem;
 }
+
 .cabin-header-content {
     display: flex;
     align-items: center;
     gap: 1rem;
 }
 
-.cabin-card{
+.cabin-card {
     padding: 2rem;
     margin-block-start: 2rem;
     background-color: white;
-    border: 1px solid
- color-mix(in oklch, black 20%, transparent);
+    border: 1px solid color-mix(in oklch, black 20%, transparent);
     max-inline-size: 80ch;
     font-size: 1rem;
-    border-radius:1.5rem;
-    corner-shape:squircle;
+    border-radius: 1.5rem;
+    corner-shape: squircle;
+}
+
+.cabin-popular-content {
+    background: var(--cabin-widget-bg);
+    border: 1px solid var(--cabin-border-color);
+    border-radius: var(--cabin-border-radius);
+    font-family: var(--cabin-font-family);
+    padding: var(--cabin-padding);
+}
+
+.cabin-popular-content ul,
+.cabin-popular-content ol {
+    font-size: 1rem;
+}
+
+#cabin_analytics_dashboard_widget .inside {
+    display: grid;
+    gap: 1rem;
+}
+
+#cabin_analytics_dashboard_widget .inside {
+    margin: 0;
+    padding: 0
+}
+
+#cabin_analytics_dashboard_widget .cabin-analytics-title, #cabin_analytics_popular_content_widget .cabin-popular-content-dashboard__title {
+ line-height: 1.2;
+    color: var(--cabin-text-primary, #1e1e1e);
+    font-size: 1.25rem;
+    font-weight: var(--cabin-font-weight-semibold, 600);
+}
+
+#cabin_analytics_dashboard_widget .cabin-analytics-domain {
+    font-weight: var(--cabin-font-weight-semibold, 600)
+}
+
+#cabin_analytics_dashboard_widget .cabin-analytics-controls {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: var(--cabin-gap-lg, 24px);
+    justify-content: space-between
+}
+
+#cabin_analytics_dashboard_widget .cabin-dashboard-control {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cabin-gap-xs, 4px)
+}
+
+#cabin_analytics_dashboard_widget .cabin-dashboard-control__label {
+    color: var(--cabin-text-tertiary, #666);
+    font-size: 10px;
+    font-weight: var(--cabin-font-weight-medium, 500);
+    letter-spacing: var(--cabin-letter-spacing, .5px);
+    line-height: 1.2;
+    text-transform: uppercase
+}
+
+#cabin_analytics_dashboard_widget .cabin-dashboard-control__button-group {
+    border: 1px solid var(--cabin-border-color, #dcdcde);
+    border-radius: var(--cabin-border-radius-sm, 6px);
+    display: flex;
+    overflow: hidden
+}
+
+#cabin_analytics_dashboard_widget .cabin-dashboard-control__button {
+    background: var(--cabin-widget-bg, #fff);
+    border: 0;
+    border-right: 1px solid var(--cabin-border-color, #dcdcde);
+    color: var(--cabin-text-secondary, #555);
+    cursor: pointer;
+    font-size: var(--cabin-font-size-base, 14px);
+    font-weight: var(--cabin-font-weight-medium, 500);
+    padding: var(--cabin-button-padding-v, 8px) var(--cabin-gap-md, 16px);
+    transition: var(--cabin-transition, all .2s ease)
+}
+
+#cabin_analytics_dashboard_widget .cabin-dashboard-control__button:last-child {
+    border-right: 0
+}
+
+#cabin_analytics_dashboard_widget .cabin-dashboard-control__button:hover:not(.active) {
+    background: var(--cabin-bg-hover, #f5f5f5)
+}
+
+#cabin_analytics_dashboard_widget .cabin-dashboard-control__button:focus-visible {
+    outline: var(--cabin-outline-width, 2px) solid var(--cabin-primary, #2271b1);
+    outline-offset: var(--cabin-outline-offset, -2px);
+    z-index: 1
+}
+
+#cabin_analytics_dashboard_widget .cabin-dashboard-control__button.active {
+    background: var(--cabin-button-active-bg, #2271b1);
+    color: var(--cabin-button-active-text, #fff)
 }

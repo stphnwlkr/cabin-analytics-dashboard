@@ -36,7 +36,7 @@
 								setAttributes( { title: value } );
 							},
 							help: __( 'Leave empty to use the default title from Cabin Analytics settings.', 'cabin-analytics-dashboard' ),
-							placeholder: __( 'Top Pages', 'cabin-analytics-dashboard' )
+							placeholder: __( 'Top Content', 'cabin-analytics-dashboard' )
 						} ),
 						el( RangeControl, {
 							label: __( 'Quantity', 'cabin-analytics-dashboard' ),
@@ -78,7 +78,7 @@
 						el(
 							'div',
 							{ style: { padding: '12px 0', width: '100%' } },
-							el( 'p', null, el( 'strong', null, title || __( 'Top Pages', 'cabin-analytics-dashboard' ) ) ),
+							el( 'p', null, el( 'strong', null, title || __( 'Top Content', 'cabin-analytics-dashboard' ) ) ),
 							el(
 								'ul',
 								{ style: { margin: '10px 0', paddingLeft: '20px' } },

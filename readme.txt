@@ -3,7 +3,7 @@
 Contributors:      Stephen Walker
 Tags:              block, analytics, cabin, dashboard, charts, popular content
 Tested up to:      7.0
-Stable tag:        2.0
+Stable tag:        2.0.1
 License:           GPLv2 or later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -115,6 +115,13 @@ This plugin uses the Cabin Analytics API v1 as documented at https://docs.withca
 7. Popular Content block output
 
 == Changelog ==
+
+= 2.0.1 =
+* Fixed Plugin Check i18n translator comments and escaped segmented control output.
+* Restricted dashboard widgets to content creators and kept them available to users who can edit posts.
+* Hardened the Cabin stats REST endpoint by limiting requests to the configured domain and supported date ranges.
+* Changed the stored API key field to a password input.
+* Removed development-only files from the distributable WordPress plugin package.
 
 = 2.0 =
 * Fixed dashboard asset cache-busting so updated chart widget JavaScript and CSS load reliably without changing the public plugin version

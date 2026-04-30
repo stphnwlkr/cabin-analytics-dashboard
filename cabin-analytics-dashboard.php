@@ -3,7 +3,7 @@
  * Plugin Name:       Cabin Analytics Dashboard
  * Plugin URI:        https://flyingw.press
  * Description:       Display Cabin Analytics data with interactive charts via dashboard widgets, blocks, and shortcodes.
- * Version:           2.0
+ * Version:           2.0.1
  * Requires at least: 6.8.3
  * Requires PHP:      8.1
  * Author:            Stephen Walker
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CABIN_ANALYTICS_VERSION', '2.0' );
+define( 'CABIN_ANALYTICS_VERSION', '2.0.1' );
 define( 'CABIN_ANALYTICS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CABIN_ANALYTICS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
@@ -242,7 +242,7 @@ function cabin_analytics_api_key_render() {
 	$api_key = isset( $options['api_key'] ) ? $options['api_key'] : '';
 	?>
 	<div class="cabin-field-wrapper">
-		<input type="text" name="cabin_analytics_dashboard_options[api_key]" value="<?php echo esc_attr( $api_key ); ?>" class="cabin-input" placeholder="sk_live_..." autocomplete="off" />
+		<input type="password" name="cabin_analytics_dashboard_options[api_key]" value="<?php echo esc_attr( $api_key ); ?>" class="cabin-input" placeholder="sk_live_..." autocomplete="off" />
 		<p class="cabin-description">
 			<svg class="cabin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 				<circle cx="12" cy="12" r="10"/>
@@ -492,7 +492,7 @@ function cabin_analytics_dashboard_register_rest_routes() {
 		'methods'             => 'GET',
 		'callback'            => 'cabin_analytics_dashboard_get_popular_content_rest',
 		'permission_callback' => function() {
-			return current_user_can( 'read' );
+			return current_user_can( 'edit_posts' );
 		},
 		'args'                => array(
 			'qty'        => array(
@@ -616,6 +616,7 @@ function cabin_analytics_dashboard_render_popular_content_dashboard_items( $item
 						</span>
 						<span class="cabin-popular-content__summary-actions">
 							<span class="cabin-popular-content__summary-action"><?php esc_html_e( 'view details', 'cabin-analytics-dashboard' ); ?></span>
+							<?php /* translators: %s: content title. */ ?>
 							<a class="cabin-popular-content__summary-content-link" href="<?php echo esc_url( $item['url'] ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Visit %s', 'cabin-analytics-dashboard' ), $item['title'] ) ); ?>"><?php esc_html_e( 'view content', 'cabin-analytics-dashboard' ); ?></a>
 						</span>
 					</summary>
@@ -646,6 +647,73 @@ function cabin_analytics_dashboard_render_popular_content_dashboard_items( $item
 }
 
 /**
+ * Return the allowed chart date ranges.
+ *
+ * @return int[] Allowed date ranges in days.
+ */
+function cabin_analytics_dashboard_get_allowed_chart_ranges() {
+	return array( 7, 14, 30, 90 );
+}
+
+/**
+ * Normalize a domain value for comparison and Cabin API requests.
+ *
+ * @param string $domain Domain value.
+ * @return string Normalized domain.
+ */
+function cabin_analytics_dashboard_normalize_domain( $domain ) {
+	$domain = sanitize_text_field( (string) $domain );
+	$domain = preg_replace( '#^https?://#i', '', $domain );
+	$domain = preg_replace( '#^www\.#i', '', $domain );
+	return trim( $domain, "/ \t\n\r\0\x0B" );
+}
+
+/**
+ * Validate whether a stats request is limited to a supported range and the saved domain.
+ *
+ * @param WP_REST_Request $request REST request.
+ * @param string          $domain  Normalized requested domain.
+ * @return true|WP_Error True when valid, otherwise an error.
+ */
+function cabin_analytics_dashboard_validate_stats_request( $request, $domain ) {
+	$options         = get_option( 'cabin_analytics_dashboard_options' );
+	$saved_domain    = isset( $options['domain'] ) ? cabin_analytics_dashboard_normalize_domain( $options['domain'] ) : '';
+	$requested_start = (string) $request->get_param( 'start_date' );
+	$requested_end   = (string) $request->get_param( 'end_date' );
+
+	if ( '' === $saved_domain || $domain !== $saved_domain ) {
+		return new WP_Error(
+			'invalid_domain',
+			__( 'Analytics can only be requested for the configured Cabin Analytics domain.', 'cabin-analytics-dashboard' ),
+			array( 'status' => 403 )
+		);
+	}
+
+	try {
+		$start = new DateTimeImmutable( $requested_start, wp_timezone() );
+		$end   = new DateTimeImmutable( $requested_end, wp_timezone() );
+	} catch ( Exception $exception ) {
+		return new WP_Error(
+			'invalid_date',
+			__( 'Invalid analytics date range.', 'cabin-analytics-dashboard' ),
+			array( 'status' => 400 )
+		);
+	}
+
+	$days = (int) $start->diff( $end )->format( '%a' ) + 1;
+
+	if ( $start > $end || ! in_array( $days, cabin_analytics_dashboard_get_allowed_chart_ranges(), true ) ) {
+		return new WP_Error(
+			'invalid_date_range',
+			__( 'Analytics date range must be one of the supported ranges.', 'cabin-analytics-dashboard' ),
+			array( 'status' => 400 )
+		);
+	}
+
+	return true;
+}
+
+/**
  * Validate date format
  */
 function cabin_analytics_validate_date( $value, $request, $param ) {
@@ -672,7 +740,12 @@ function cabin_analytics_dashboard_get_stats( $request ) {
 		return new WP_Error( 'no_domain', __( 'Domain not specified', 'cabin-analytics-dashboard' ), array( 'status' => 400 ) );
 	}
 
-	$domain = trim( str_replace( array( 'http://', 'https://', 'www.' ), '', $domain ), '/' );
+	$domain = cabin_analytics_dashboard_normalize_domain( $domain );
+
+	$validation = cabin_analytics_dashboard_validate_stats_request( $request, $domain );
+	if ( is_wp_error( $validation ) ) {
+		return $validation;
+	}
 
 	$start_date = $request->get_param( 'start_date' );
 	$end_date = $request->get_param( 'end_date' );
@@ -788,13 +861,13 @@ add_action( 'wp_enqueue_scripts', 'cabin_analytics_dashboard_enqueue_assets' );
 
 
 /**
- * Register dashboard widget
+ * Register dashboard widget.
  */
 function cabin_analytics_dashboard_add_widget() {
 	$options = get_option( 'cabin_analytics_dashboard_options' );
 	$api_key = isset( $options['api_key'] ) ? $options['api_key'] : '';
 	
-	if ( empty( $api_key ) ) {
+	if ( empty( $api_key ) || ! current_user_can( 'edit_posts' ) ) {
 		return;
 	}
 
@@ -850,6 +923,34 @@ function cabin_analytics_dashboard_widget_render() {
 	);
 
 }
+
+/**
+ * Return the allowed HTML for dashboard segmented controls.
+ *
+ * @return array Allowed HTML.
+ */
+function cabin_analytics_dashboard_get_segmented_control_allowed_html() {
+	return array(
+		'div'    => array(
+			'class'            => true,
+			'role'             => true,
+			'aria-label'       => true,
+			'aria-labelledby'  => true,
+		),
+		'span'   => array(
+			'id'    => true,
+			'class' => true,
+		),
+		'button' => array(
+			'class'                    => true,
+			'type'                     => true,
+			'aria-pressed'             => true,
+			'data-cabin-popular-range' => true,
+			'data-cabin-popular-qty'   => true,
+		),
+	);
+}
+
 
 /**
  * Render a reusable segmented control for dashboard widgets.
@@ -968,31 +1069,38 @@ function cabin_analytics_dashboard_popular_content_widget_render() {
 			<div class="cabin-popular-content-dashboard__title-wrapper">
 				<h2 class="cabin-popular-content-dashboard__title"><?php esc_html_e( 'Cabin Analytics Popular Content', 'cabin-analytics-dashboard' ); ?></h2>
 				<?php if ( '' !== $domain ) : ?>
+					<?php /* translators: %s: configured Cabin Analytics domain. */ ?>
 					<div class="cabin-popular-content-dashboard__domain" aria-label="<?php echo esc_attr( sprintf( __( 'Domain: %s', 'cabin-analytics-dashboard' ), $domain ) ); ?>"><?php echo esc_html( $domain ); ?></div>
 				<?php endif; ?>
 			</div>
 			<div class="cabin-popular-content-dashboard__controls">
 				<?php
-				echo cabin_analytics_dashboard_render_segmented_control(
-					array(
-						'label'       => __( 'Date range', 'cabin-analytics-dashboard' ),
-						'group_label' => __( 'Select popular content date range', 'cabin-analytics-dashboard' ),
-						'options'     => $date_range_options,
-						'active'      => $date_range,
-						'data_attr'   => 'data-cabin-popular-range',
-						'class'       => 'cabin-dashboard-control--date-range',
-					)
-				); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				echo cabin_analytics_dashboard_render_segmented_control(
-					array(
-						'label'       => __( 'Records to show', 'cabin-analytics-dashboard' ),
-						'group_label' => __( 'Select number of records to show', 'cabin-analytics-dashboard' ),
-						'options'     => $quantity_options,
-						'active'      => $qty,
-						'data_attr'   => 'data-cabin-popular-qty',
-						'class'       => 'cabin-dashboard-control--quantity',
-					)
-				); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				echo wp_kses(
+					cabin_analytics_dashboard_render_segmented_control(
+						array(
+							'label'       => __( 'Date range', 'cabin-analytics-dashboard' ),
+							'group_label' => __( 'Select popular content date range', 'cabin-analytics-dashboard' ),
+							'options'     => $date_range_options,
+							'active'      => $date_range,
+							'data_attr'   => 'data-cabin-popular-range',
+							'class'       => 'cabin-dashboard-control--date-range',
+						)
+					),
+					cabin_analytics_dashboard_get_segmented_control_allowed_html()
+				);
+				echo wp_kses(
+					cabin_analytics_dashboard_render_segmented_control(
+						array(
+							'label'       => __( 'Records to show', 'cabin-analytics-dashboard' ),
+							'group_label' => __( 'Select number of records to show', 'cabin-analytics-dashboard' ),
+							'options'     => $quantity_options,
+							'active'      => $qty,
+							'data_attr'   => 'data-cabin-popular-qty',
+							'class'       => 'cabin-dashboard-control--quantity',
+						)
+					),
+					cabin_analytics_dashboard_get_segmented_control_allowed_html()
+				);
 				?>
 			</div>
 		</div>

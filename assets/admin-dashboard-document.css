@@ -1,0 +1,137 @@
+html {
+	height: auto !important;
+	min-height: 0 !important;
+	min-width: 0;
+}
+
+body.uplianda-dashboard-document {
+	--uplianda-dashboard-color-background: #ffffff;
+	--uplianda-dashboard-color-surface: #fff;
+	--uplianda-dashboard-color-surface-text: #1e1e1e;
+	--uplianda-dashboard-color-surface-muted: #50575e;
+	--uplianda-dashboard-color-text: #1e1e1e;
+	--uplianda-dashboard-color-muted: #50575e;
+	--uplianda-dashboard-color-border: #dcdcde;
+	--uplianda-dashboard-color-accent: #2271b1;
+	--uplianda-dashboard-color-accent-hover: #135e96;
+	--uplianda-dashboard-font-family: -apple-system, BlinkMacSystemFont, "Avenir Next", Avenir, "Segoe UI", "Helvetica Neue", "Adwaita Sans", Cantarell, Ubuntu, Roboto, Noto, Helvetica, Arial, sans-serif;
+	--uplianda-dashboard-font-size-small: .875rem;
+	--uplianda-dashboard-font-size-base: 1rem;
+	--uplianda-dashboard-font-size-large: 1.5rem;
+	--uplianda-dashboard-font-size-x-large: clamp(1.75rem, 3vw, 2.25rem);
+	--uplianda-dashboard-line-height: 1.5;
+	--uplianda-dashboard-space-1: .25rem;
+	--uplianda-dashboard-space-2: .5rem;
+	--uplianda-dashboard-space-3: 1rem;
+	--uplianda-dashboard-space-4: 1.5rem;
+	--uplianda-dashboard-space-5: 2rem;
+	--uplianda-dashboard-space-6: 3rem;
+	background: var(--uplianda-dashboard-color-background);
+	color: var(--uplianda-dashboard-color-text);
+	font-family: var(--uplianda-dashboard-font-family);
+	font-size: var(--uplianda-dashboard-font-size-base);
+	height: auto !important;
+	line-height: var(--uplianda-dashboard-line-height);
+	margin: 0;
+	min-height: 0 !important;
+	min-width: 0;
+	overflow-x: hidden;
+}
+
+.uplianda-dashboard-document__content {
+	box-sizing: border-box;
+	display: flow-root;
+	height: auto !important;
+	min-height: 0 !important;
+	padding: clamp(var(--uplianda-dashboard-space-2), 4vw, var(--uplianda-dashboard-space-4));
+	width: 100%;
+}
+
+/*
+ * Builder-neutral defaults. :where() keeps specificity at zero so block
+ * settings, Global Styles, and user CSS remain authoritative.
+ */
+:where(.uplianda-dashboard-document) :where(h1, h2, h3, h4, h5, h6) {
+	color: inherit;
+	font-family: inherit;
+	font-weight: 600;
+	line-height: 1.2;
+	margin-block: 0 var(--uplianda-dashboard-space-3);
+}
+
+:where(.uplianda-dashboard-document) :where(h1) {
+	font-size: var(--uplianda-dashboard-font-size-x-large);
+}
+
+:where(.uplianda-dashboard-document) :where(h2, h3) {
+	font-size: var(--uplianda-dashboard-font-size-large);
+}
+
+:where(.uplianda-dashboard-document) :where(p, ul, ol, dl, figure, table) {
+	margin-block: 0 var(--uplianda-dashboard-space-3);
+}
+
+:where(.uplianda-dashboard-document) :where(a) {
+	color: var(--uplianda-dashboard-color-accent);
+	text-underline-offset: .15em;
+}
+
+:where(.uplianda-dashboard-document) :where(a:hover) {
+	color: var(--uplianda-dashboard-color-accent-hover);
+}
+
+:where(.uplianda-dashboard-document) :where(a:focus-visible) {
+	border-radius: 2px;
+	outline: 2px solid var(--uplianda-dashboard-color-accent);
+	outline-offset: 2px;
+}
+
+:where(.uplianda-dashboard-document) :where(.wp-block-columns) {
+	gap: var(--uplianda-dashboard-space-4);
+}
+
+.uplianda-dashboard-document__content > :first-child {
+	margin-block-start: 0;
+}
+
+.uplianda-dashboard-document__content > :last-child {
+	margin-block-end: 0;
+}
+
+.uplianda-dashboard-new-tab-notice {
+	clip: rect(1px, 1px, 1px, 1px);
+	clip-path: inset(50%);
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	padding: 0;
+	position: absolute;
+	white-space: nowrap;
+	width: 1px;
+}
+
+/* Give Cabin reports a consistent accessible baseline across themes/builders. */
+.uplianda-dashboard-document {
+	--uplianda-widget-bg: var(--uplianda-dashboard-color-surface);
+	--uplianda-border-color: var(--uplianda-dashboard-color-border);
+	--uplianda-text-primary: var(--uplianda-dashboard-color-surface-text);
+	--uplianda-text-secondary: var(--uplianda-dashboard-color-surface-muted);
+	--uplianda-text-tertiary: var(--uplianda-dashboard-color-surface-muted);
+	--uplianda-bg-hover: #f0f0f1;
+	--uplianda-bg-secondary: #f6f7f7;
+	--uplianda-grid-line: var(--uplianda-dashboard-color-border);
+	--uplianda-primary: var(--uplianda-dashboard-color-accent);
+	--uplianda-primary-dark: var(--uplianda-dashboard-color-accent-hover);
+	--uplianda-button-active-bg: var(--uplianda-dashboard-color-accent);
+	--uplianda-button-active-text: #fff;
+	--uplianda-font-family: var(--uplianda-dashboard-font-family);
+	--uplianda-progress-color: #2271b1;
+}
+
+.uplianda-dashboard-document .uplianda-analytics-widget,
+.uplianda-dashboard-document .uplianda-popular-content,
+.uplianda-dashboard-document .uplianda-insights {
+	background: var(--uplianda-widget-bg);
+	color: var(--uplianda-dashboard-color-surface-text);
+	font-family: var(--uplianda-dashboard-font-family);
+}

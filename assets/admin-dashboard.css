@@ -1,0 +1,319 @@
+.uplianda-private-dashboard {
+	margin-right: 20px;
+}
+
+.uplianda-private-dashboard__header {
+	align-items: flex-start;
+	display: flex;
+	gap: 24px;
+	justify-content: space-between;
+	margin: 24px 0 20px;
+}
+
+.uplianda-private-dashboard__header h1,
+.uplianda-private-dashboard__header p {
+	margin: 0;
+}
+
+.uplianda-private-dashboard__header p {
+	color: #646970;
+	margin-top: 6px;
+}
+
+.uplianda-private-dashboard__actions {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+/* Keep theme and builder styles from inflating the WordPress admin toolbar. */
+.uplianda-private-dashboard .uplianda-private-dashboard__actions > .button {
+	appearance: none;
+	background: #f6f7f7;
+	border: 1px solid #2271b1;
+	border-radius: 3px;
+	box-shadow: none;
+	box-sizing: border-box;
+	color: #2271b1;
+	cursor: pointer;
+	display: inline-flex;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	font-size: 13px;
+	font-weight: 400;
+	justify-content: center;
+	line-height: 2.15384615;
+	margin: 0;
+	min-height: 30px;
+	padding: 0 10px;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.uplianda-private-dashboard .uplianda-private-dashboard__actions > .button:hover,
+.uplianda-private-dashboard .uplianda-private-dashboard__actions > .button:focus-visible {
+	background: #f0f0f1;
+	border-color: #135e96;
+	color: #135e96;
+}
+
+.uplianda-private-dashboard .uplianda-private-dashboard__actions > .button:focus-visible {
+	box-shadow: 0 0 0 1px #fff, 0 0 0 3px #2271b1;
+	outline: 2px solid transparent;
+}
+
+.uplianda-private-dashboard .uplianda-private-dashboard__actions > .button-primary {
+	background: #2271b1;
+	border-color: #2271b1;
+	color: #fff;
+}
+
+.uplianda-private-dashboard .uplianda-private-dashboard__actions > .button-primary:hover,
+.uplianda-private-dashboard .uplianda-private-dashboard__actions > .button-primary:focus-visible {
+	background: #135e96;
+	border-color: #135e96;
+	color: #fff;
+}
+
+.uplianda-private-dashboard__canvas {
+	background: var(--uplianda-dashboard-color-background, #fff);
+	border: 1px solid var(--wpds-color-stroke-surface-neutral-weak, #c3c4c7);
+	border-radius: var(--wpds-border-radius-lg, 10px);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
+	box-sizing: border-box;
+	min-height: 320px;
+	overflow: hidden;
+}
+
+.uplianda-private-dashboard__frame {
+	background: #fff;
+	border: 0;
+	box-sizing: border-box;
+	display: block;
+	height: max(640px, calc(100vh - 190px));
+	width: 100%;
+}
+
+.uplianda-private-dashboard__empty {
+	margin: 64px auto;
+	max-width: 620px;
+	padding: 20px;
+	text-align: center;
+}
+
+.uplianda-private-dashboard__empty h2 {
+	font-size: 24px;
+	margin-bottom: 8px;
+}
+
+.uplianda-private-dashboard__empty p {
+	color: #50575e;
+	font-size: 15px;
+	line-height: 1.6;
+	margin: 0 auto 20px;
+}
+
+.uplianda-style-drawer-open {
+	overflow: hidden;
+}
+
+.uplianda-style-overlay {
+	align-items: stretch;
+	background: rgba(0, 0, 0, .38);
+	display: flex;
+	inset: 0;
+	justify-content: flex-end;
+	position: fixed;
+	z-index: 100000;
+}
+
+.uplianda-style-overlay[hidden] {
+	display: none;
+}
+
+.uplianda-style-drawer {
+	background: #fff;
+	box-shadow: -8px 0 30px rgba(0, 0, 0, .2);
+	box-sizing: border-box;
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr) auto;
+	max-width: calc(100vw - 32px);
+	transform: translateX(100%);
+	transition: transform 180ms ease;
+	width: 440px;
+}
+
+.uplianda-style-overlay.is-open .uplianda-style-drawer {
+	transform: translateX(0);
+}
+
+.uplianda-style-drawer__header {
+	align-items: flex-start;
+	border-bottom: 1px solid #dcdcde;
+	display: flex;
+	gap: 20px;
+	justify-content: space-between;
+	padding: 20px 24px;
+}
+
+.uplianda-style-drawer__header h2,
+.uplianda-style-drawer__header p {
+	margin: 0;
+}
+
+.uplianda-style-drawer__header h2 {
+	font-size: 20px;
+	line-height: 1.3;
+}
+
+.uplianda-style-drawer__header p {
+	color: #50575e;
+	margin-top: 5px;
+}
+
+.uplianda-style-drawer__close {
+	align-items: center;
+	background: transparent;
+	border: 0;
+	border-radius: 3px;
+	color: #1d2327;
+	cursor: pointer;
+	display: inline-flex;
+	font-size: 28px;
+	height: 36px;
+	justify-content: center;
+	line-height: 1;
+	padding: 0;
+	width: 36px;
+}
+
+.uplianda-style-drawer__close:hover {
+	background: #f0f0f1;
+}
+
+.uplianda-style-drawer__close:focus-visible {
+	box-shadow: 0 0 0 2px #2271b1;
+	outline: 2px solid transparent;
+}
+
+.uplianda-style-drawer__body {
+	overflow: auto;
+	overscroll-behavior: contain;
+	padding: 8px 24px 24px;
+}
+
+.uplianda-style-group {
+	border: 0;
+	border-bottom: 1px solid #dcdcde;
+	display: grid;
+	gap: 16px;
+	margin: 0;
+	padding: 22px 0;
+}
+
+.uplianda-style-group:last-child {
+	border-bottom: 0;
+}
+
+.uplianda-style-group legend {
+	font-size: 15px;
+	font-weight: 600;
+	padding: 0;
+}
+
+.uplianda-style-control {
+	display: grid;
+	gap: 6px;
+}
+
+.uplianda-style-control > label {
+	font-weight: 600;
+}
+
+.uplianda-style-control > p {
+	color: #646970;
+	font-size: 12px;
+	line-height: 1.45;
+	margin: 0;
+}
+
+.uplianda-style-control__input {
+	align-items: center;
+	display: flex;
+	gap: 10px;
+}
+
+.uplianda-style-control__input input[type="text"],
+.uplianda-style-control__input input[type="number"] {
+	box-sizing: border-box;
+	max-width: 100%;
+	width: 100%;
+}
+
+.uplianda-style-control__input input[type="color"] {
+	background: #fff;
+	border: 1px solid #8c8f94;
+	border-radius: 4px;
+	cursor: pointer;
+	height: 36px;
+	padding: 3px;
+	width: 54px;
+}
+
+.uplianda-style-control__input output {
+	color: #50575e;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 12px;
+}
+
+.uplianda-style-drawer__footer {
+	align-items: center;
+	background: #fff;
+	border-top: 1px solid #dcdcde;
+	display: flex;
+	gap: 12px;
+	justify-content: space-between;
+	padding: 16px 24px;
+}
+
+.uplianda-style-drawer__footer > div {
+	display: flex;
+	flex: 0 0 auto;
+	gap: 8px;
+}
+
+.uplianda-style-drawer__status {
+	color: #50575e;
+	font-size: 12px;
+	margin: 0;
+}
+
+@media (max-width: 782px) {
+	.uplianda-private-dashboard {
+		margin-right: 10px;
+	}
+
+	.uplianda-private-dashboard__header {
+		flex-direction: column;
+	}
+
+	.uplianda-style-drawer {
+		max-width: 100vw;
+		width: 100%;
+	}
+
+	.uplianda-style-drawer__footer {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.uplianda-style-drawer__footer > div {
+		justify-content: flex-end;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.uplianda-style-drawer {
+		transition: none;
+	}
+}

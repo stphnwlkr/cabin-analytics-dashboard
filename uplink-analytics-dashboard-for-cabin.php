@@ -3,7 +3,7 @@
  * Plugin Name:       Uplink Analytics Dashboard for Cabin
  * Plugin URI:        https://uplink.press/code/uplink-analytics-dashboard-for-cabin/
  * Description:       Display Cabin Analytics data with interactive charts via dashboard widgets, blocks, and shortcodes.
- * Version:           1.1.0
+ * Version:           1.1.2
  * Requires at least: 6.9
  * Requires PHP:      8.3
  * Author:            UplinkPress
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'UPLIANDA_VERSION', '1.1.0' );
+define( 'UPLIANDA_VERSION', '1.1.2' );
 define( 'UPLIANDA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'UPLIANDA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'UPLIANDA_CABIN_URL', 'https://withcabin.com/?utm_campaign=wp_widget&utm_medium=web&utm_source=sw' );

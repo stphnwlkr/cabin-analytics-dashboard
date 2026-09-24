@@ -1,9 +1,5 @@
-svg.editor-post-card-panel__icon {
-	background-color: currentColor;
-	-webkit-mask: url("branding/chart-analysis.svg") center / contain no-repeat;
-	mask: url("branding/chart-analysis.svg") center / contain no-repeat;
-}
-
-svg.editor-post-card-panel__icon > * {
-	display: none;
+.uplianda-dashboard-editor-return {
+	flex-shrink: 0;
+	text-decoration: none;
+	white-space: nowrap;
 }

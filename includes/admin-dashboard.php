@@ -320,24 +320,7 @@ function uplianda_register_private_dashboard_menu() {
 }
 add_action( 'admin_menu', 'uplianda_register_private_dashboard_menu', 20 );
 
-/** Add a direct return link while editing the private dashboard layout. */
-function uplianda_add_dashboard_editor_admin_bar_link( $wp_admin_bar ) {
-	$screen = get_current_screen();
-	if ( ! $screen || uplianda_layout_post_type() !== $screen->post_type || ! current_user_can( uplianda_manage_capability() ) ) {
-		return;
-	}
-
-	$wp_admin_bar->add_node(
-		array(
-			'id'    => 'uplianda-view-dashboard',
-			'title' => __( 'View Dashboard', 'uplink-analytics-dashboard-for-cabin' ),
-			'href'  => admin_url( 'admin.php?page=uplianda-dashboard' ),
-		)
-	);
-}
-add_action( 'admin_bar_menu', 'uplianda_add_dashboard_editor_admin_bar_link', 100 );
-
-/** Add a dashboard return action to the block editor Options menu. */
+/** Add a visible dashboard return action to the block editor toolbar. */
 function uplianda_enqueue_dashboard_editor_navigation() {
 	$screen = get_current_screen();
 	if ( ! $screen || uplianda_layout_post_type() !== $screen->post_type || ! current_user_can( uplianda_manage_capability() ) ) {
@@ -354,7 +337,7 @@ function uplianda_enqueue_dashboard_editor_navigation() {
 	wp_enqueue_script(
 		'uplianda-dashboard-editor-navigation',
 		UPLIANDA_PLUGIN_URL . 'assets/admin-dashboard-editor.js',
-		array( 'wp-components', 'wp-element', 'wp-editor', 'wp-plugins' ),
+		array(),
 		filemtime( UPLIANDA_PLUGIN_DIR . 'assets/admin-dashboard-editor.js' ),
 		true
 	);
@@ -364,9 +347,7 @@ function uplianda_enqueue_dashboard_editor_navigation() {
 		'UpliandaDashboardEditor',
 		array(
 			'dashboardUrl' => admin_url( 'admin.php?page=uplianda-dashboard' ),
-			'backLabel'    => __( 'Back to Dashboard', 'uplink-analytics-dashboard-for-cabin' ),
-			'viewLabel'    => __( 'View Dashboard', 'uplink-analytics-dashboard-for-cabin' ),
-			'iconSvg'      => uplianda_chart_icon_markup( 24 ),
+			'backLabel'    => __( 'View Dashboard', 'uplink-analytics-dashboard-for-cabin' ),
 		)
 	);
 }

@@ -5,7 +5,7 @@ Tags:              analytics, cabin, dashboard, charts, privacy
 Requires at least: 6.9
 Requires PHP:      8.3
 Tested up to:      7.1
-Stable tag:        1.1.0
+Stable tag:        1.1.2
 License:           GPL-2.0-or-later
 License URI:       https://spdx.org/licenses/GPL-2.0-or-later.html
 
@@ -216,6 +216,12 @@ This plugin uses the Cabin Analytics API v1. Visit https://withcabin.com for cur
 4. Custom private dashboard combining the Country Traffic Map, Site Traffic chart, Popular Content, and sustainability summary.
 
 == Changelog ==
+
+= 1.1.2 =
+* Restored a visible View Dashboard button in the private dashboard editor and removed the hidden Options-menu action.
+
+= 1.1.1 =
+* Removed the redundant admin-bar and editor-panel dashboard links, leaving the editor Options menu return action.
 
 = 1.1.0 =
 * Added WordPress 7.1 icon registry support with a compatibility fallback for WordPress 6.9 and 7.0.

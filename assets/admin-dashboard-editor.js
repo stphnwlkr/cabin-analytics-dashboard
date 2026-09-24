@@ -1,59 +1,49 @@
-( function ( wp, settings ) {
+( function ( settings ) {
 	'use strict';
 
-	if ( ! wp || ! wp.element || ! wp.plugins || ! settings ) {
+	if ( ! settings || ! settings.dashboardUrl || ! settings.backLabel ) {
 		return;
 	}
 
-	var PluginMoreMenuItem = wp.editor && wp.editor.PluginMoreMenuItem
-		? wp.editor.PluginMoreMenuItem
-		: wp.editPost && wp.editPost.PluginMoreMenuItem;
-	var PluginPostStatusInfo = wp.editor && wp.editor.PluginPostStatusInfo
-		? wp.editor.PluginPostStatusInfo
-		: wp.editPost && wp.editPost.PluginPostStatusInfo;
+	var className = 'uplianda-dashboard-editor-return';
+	var selectors = [ '.editor-header__settings', '.edit-post-header__settings' ];
 
-	if ( ! PluginMoreMenuItem ) {
-		return;
+	function findToolbar() {
+		var toolbar = null;
+
+		selectors.some( function ( selector ) {
+			toolbar = document.querySelector( selector );
+			return Boolean( toolbar );
+		} );
+
+		return toolbar;
 	}
 
-	var chartAnalysisIcon = settings.iconSvg
-		? wp.element.createElement( 'span', {
-			className: 'uplianda-editor-icon',
-			dangerouslySetInnerHTML: { __html: settings.iconSvg }
-		} )
-		: 'chart-bar';
+	function addButton() {
+		var toolbar = findToolbar();
+		var link;
 
-	wp.plugins.registerPlugin( 'uplianda-dashboard-editor-navigation', {
-		render: function () {
-			return wp.element.createElement(
-				wp.element.Fragment,
-				null,
-				wp.element.createElement(
-					PluginMoreMenuItem,
-					{
-						icon: chartAnalysisIcon,
-						onClick: function () {
-							window.location.assign( settings.dashboardUrl );
-						}
-					},
-					settings.backLabel
-				),
-				PluginPostStatusInfo && wp.components
-					? wp.element.createElement(
-						PluginPostStatusInfo,
-						null,
-						wp.element.createElement(
-							wp.components.Button,
-							{
-								href: settings.dashboardUrl,
-								icon: chartAnalysisIcon,
-								variant: 'secondary'
-							},
-							settings.viewLabel
-						)
-					)
-					: null
-			);
+		if ( ! toolbar || toolbar.querySelector( '.' + className ) ) {
+			return;
 		}
+
+		link = document.createElement( 'a' );
+		link.className = 'components-button is-secondary ' + className;
+		link.href = settings.dashboardUrl;
+		link.textContent = settings.backLabel;
+		link.setAttribute( 'aria-label', settings.backLabel );
+
+		toolbar.insertBefore( link, toolbar.firstChild );
+	}
+
+	if ( 'loading' === document.readyState ) {
+		document.addEventListener( 'DOMContentLoaded', addButton );
+	} else {
+		addButton();
+	}
+
+	new MutationObserver( addButton ).observe( document.documentElement, {
+		childList: true,
+		subtree: true
 	} );
-}( window.wp, window.UpliandaDashboardEditor ) );
+}( window.UpliandaDashboardEditor ) );

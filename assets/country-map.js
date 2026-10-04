@@ -10,6 +10,8 @@
 		const tooltip = map.querySelector( '.uplianda-country-map__tooltip' );
 		const name = tooltip ? tooltip.querySelector( '[data-uplianda-map-tooltip-name]' ) : null;
 		const value = tooltip ? tooltip.querySelector( '[data-uplianda-map-tooltip-value]' ) : null;
+		const flag = tooltip ? tooltip.querySelector( '[data-uplianda-map-tooltip-flag]' ) : null;
+		const percent = tooltip ? tooltip.querySelector( '[data-uplianda-map-tooltip-percent]' ) : null;
 		const countries = Array.from( map.querySelectorAll( '[data-country-name][data-country-value][data-country-rank]' ) ).sort( function ( first, second ) {
 			return Number( first.dataset.countryRank ) - Number( second.dataset.countryRank );
 		} );
@@ -34,6 +36,18 @@
 		function showTooltip( country, x, y ) {
 			name.textContent = country.dataset.countryName;
 			value.textContent = country.dataset.countryValue;
+			if ( percent ) {
+				percent.textContent = country.dataset.countryPercent || '';
+			}
+			if ( flag ) {
+				if ( country.dataset.countryFlag ) {
+					flag.src = country.dataset.countryFlag;
+					flag.hidden = false;
+				} else {
+					flag.removeAttribute( 'src' );
+					flag.hidden = true;
+				}
+			}
 			tooltip.hidden = false;
 			tooltip.setAttribute( 'aria-hidden', 'false' );
 			positionTooltip( x, y );

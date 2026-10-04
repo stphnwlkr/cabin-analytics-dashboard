@@ -3,7 +3,7 @@
  * Plugin Name:       Uplink Analytics Dashboard for Cabin
  * Plugin URI:        https://uplink.press/code/uplink-analytics-dashboard-for-cabin/
  * Description:       Display Cabin Analytics data with interactive charts via dashboard widgets, blocks, and shortcodes.
- * Version:           1.1.2
+ * Version:           2.0.0
  * Requires at least: 6.9
  * Requires PHP:      8.3
  * Author:            UplinkPress
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'UPLIANDA_VERSION', '1.1.2' );
+define( 'UPLIANDA_VERSION', '2.0.0' );
 define( 'UPLIANDA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'UPLIANDA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'UPLIANDA_CABIN_URL', 'https://withcabin.com/?utm_campaign=wp_widget&utm_medium=web&utm_source=sw' );
@@ -175,7 +175,7 @@ function uplianda_get_options() {
 			'dashboard_demographics_browsers'         => 1,
 				'dashboard_sources_traffic_sources'        => 1,
 				'dashboard_sources_referrers'              => 1,
-				'private_dashboard_enabled'                 => 1,
+				'dashboard_widgets_enabled'                  => 1,
 				'dashboard_access_roles'                    => array( 'administrator' ),
 			),
 			uplianda_get_style_defaults()
@@ -190,7 +190,7 @@ function uplianda_get_options() {
 		'dashboard_url'              => 'UPLIANDA_DASHBOARD_URL',
 		'popular_content_title'      => 'UPLIANDA_POPULAR_CONTENT_TITLE',
 		'popular_content_date_range' => 'UPLIANDA_POPULAR_CONTENT_DATE_RANGE',
-		'private_dashboard_enabled'  => 'UPLIANDA_PRIVATE_DASHBOARD_ENABLED',
+		'dashboard_widgets_enabled'  => 'UPLIANDA_DASHBOARD_WIDGETS_ENABLED',
 		'dashboard_sustainability_total_co2'       => 'UPLIANDA_DASHBOARD_SUSTAINABILITY_TOTAL_CO2',
 		'dashboard_sustainability_average_co2'     => 'UPLIANDA_DASHBOARD_SUSTAINABILITY_AVERAGE_CO2',
 		'dashboard_sustainability_transfer_volume' => 'UPLIANDA_DASHBOARD_SUSTAINABILITY_TRANSFER_VOLUME',
@@ -441,26 +441,34 @@ function uplianda_block_init() {
 	}
 }
 add_action( 'init', 'uplianda_block_init' );
-/**
- * Register admin settings page
- */
-function uplianda_add_admin_menu() {
-	add_options_page(
-		__( 'Uplink Analytics for Cabin Settings', 'uplink-analytics-dashboard-for-cabin' ),
-		__( 'Uplink Analytics', 'uplink-analytics-dashboard-for-cabin' ),
-		'manage_options',
-		'uplink-analytics-dashboard-for-cabin',
-		'uplianda_options_page'
-	);
+/** Redirect bookmarks for the former Settings menu location. */
+function uplianda_redirect_legacy_settings_page() {
+	global $pagenow;
+
+	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only page routing.
+	if ( 'options-general.php' !== $pagenow || 'uplink-analytics-dashboard-for-cabin' !== $page || ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+	wp_safe_redirect( admin_url( 'admin.php?page=uplianda-settings' ) );
+	exit;
 }
-add_action( 'admin_menu', 'uplianda_add_admin_menu' );
+add_action( 'admin_init', 'uplianda_redirect_legacy_settings_page', 20 );
 
 /**
  * Enqueue admin styles
  */
 function uplianda_admin_styles( $hook ) {
-	if ( 'settings_page_uplink-analytics-dashboard-for-cabin' !== $hook && 'index.php' !== $hook ) {
+	$settings_hook = isset( $GLOBALS['uplianda_settings_page_hook'] ) ? $GLOBALS['uplianda_settings_page_hook'] : '';
+	if ( $settings_hook !== $hook && 'index.php' !== $hook ) {
 		return;
+	}
+
+	if ( 'index.php' === $hook ) {
+		$options = uplianda_get_options();
+		if ( empty( $options['dashboard_widgets_enabled'] ) ) {
+			return;
+		}
 	}
 	
 	$asset_file = include( UPLIANDA_PLUGIN_DIR . 'assets/index.asset.php' );
@@ -514,8 +522,8 @@ function uplianda_settings_init() {
 				'dashboard_demographics_browsers'          => 1,
 				'dashboard_sources_traffic_sources'         => 1,
 				'dashboard_sources_referrers'               => 1,
-				'private_dashboard_enabled'                  => 1,
-					'dashboard_access_roles'                     => array( 'administrator' ),
+				'dashboard_widgets_enabled'                  => 1,
+				'dashboard_access_roles'                     => array( 'administrator' ),
 				),
 				uplianda_get_style_defaults()
 			),
@@ -538,7 +546,7 @@ function uplianda_settings_init() {
 
 	add_settings_section(
 		'uplianda_private_dashboard_section',
-		__( 'Private Uplink Dashboard for Cabin', 'uplink-analytics-dashboard-for-cabin' ),
+		__( 'Cabin Dashboard', 'uplink-analytics-dashboard-for-cabin' ),
 		'uplianda_private_section_callback',
 		'uplianda'
 	);
@@ -614,9 +622,9 @@ function uplianda_settings_init() {
 	);
 
 	add_settings_field(
-		'uplianda_private_dashboard_enabled',
-		__( 'Enable Private Dashboard', 'uplink-analytics-dashboard-for-cabin' ),
-		'uplianda_enabled_render',
+		'uplianda_dashboard_widgets_enabled',
+		__( 'Enable WP dashboard widgets', 'uplink-analytics-dashboard-for-cabin' ),
+		'uplianda_dashboard_widgets_enabled_render',
 		'uplianda',
 		'uplianda_private_dashboard_section'
 	);
@@ -643,7 +651,9 @@ add_action( 'admin_init', 'uplianda_settings_init' );
  * Sanitize options callback
  */
 function uplianda_sanitize_options( $input ) {
-	$sanitized = array();
+	$input           = is_array( $input ) ? $input : array();
+	$current_options = get_option( 'uplianda_options', array() );
+	$sanitized       = is_array( $current_options ) ? $current_options : array();
 	
 	if ( isset( $input['api_key'] ) ) {
 		$sanitized['api_key'] = sanitize_text_field( $input['api_key'] );
@@ -673,24 +683,28 @@ function uplianda_sanitize_options( $input ) {
 		$sanitized['popular_content_date_range'] = $input['popular_content_date_range'];
 	}
 
-	foreach ( uplianda_get_dashboard_module_options() as $option_key => $module ) {
-		$sanitized[ $option_key ] = isset( $input[ $option_key ] ) ? 1 : 0;
+	foreach ( array_keys( uplianda_get_dashboard_module_options() ) as $option_key ) {
+		if ( array_key_exists( $option_key, $input ) ) {
+			$sanitized[ $option_key ] = ! empty( $input[ $option_key ] ) ? 1 : 0;
+		}
 	}
 
-	$sanitized['private_dashboard_enabled'] = isset( $input['private_dashboard_enabled'] ) ? 1 : 0;
-
-	$available_roles = array_keys( wp_roles()->roles );
-	$selected_roles  = isset( $input['dashboard_access_roles'] ) && is_array( $input['dashboard_access_roles'] ) ? array_map( 'sanitize_key', $input['dashboard_access_roles'] ) : array();
-	$selected_roles  = array_values( array_intersect( $selected_roles, $available_roles ) );
-
-	if ( ! in_array( 'administrator', $selected_roles, true ) ) {
-		$selected_roles[] = 'administrator';
+	if ( array_key_exists( 'dashboard_widgets_enabled', $input ) ) {
+		$sanitized['dashboard_widgets_enabled'] = ! empty( $input['dashboard_widgets_enabled'] ) ? 1 : 0;
 	}
 
-	$sanitized['dashboard_access_roles'] = array_values( array_unique( $selected_roles ) );
+	if ( isset( $input['dashboard_access_roles'] ) && is_array( $input['dashboard_access_roles'] ) ) {
+		$available_roles = array_keys( wp_roles()->roles );
+		$selected_roles  = array_map( 'sanitize_key', $input['dashboard_access_roles'] );
+		$selected_roles  = array_values( array_intersect( $selected_roles, $available_roles ) );
 
-	$current_options = get_option( 'uplianda_options', array() );
-	$current_options = is_array( $current_options ) ? $current_options : array();
+		if ( ! in_array( 'administrator', $selected_roles, true ) ) {
+			$selected_roles[] = 'administrator';
+		}
+
+		$sanitized['dashboard_access_roles'] = array_values( array_unique( $selected_roles ) );
+	}
+
 	foreach ( uplianda_get_style_settings() as $option_key => $setting ) {
 		$value = $input[ $option_key ] ?? ( $current_options[ $option_key ] ?? $setting['default'] );
 		$sanitized[ $option_key ] = uplianda_sanitize_style_value( $value, $setting );
@@ -876,6 +890,7 @@ function uplianda_modules_render() {
 				<legend><?php echo esc_html( $section_title ); ?></legend>
 				<?php foreach ( $modules_by_section[ $section ] as $option_key => $label ) : ?>
 					<label>
+						<input type="hidden" name="uplianda_options[<?php echo esc_attr( $option_key ); ?>]" value="0" />
 						<input type="checkbox" name="uplianda_options[<?php echo esc_attr( $option_key ); ?>]" value="1" <?php checked( ! empty( $options[ $option_key ] ) ); ?> />
 						<?php echo esc_html( $label ); ?>
 					</label>
@@ -920,7 +935,7 @@ function uplianda_options_page() {
 					<span></span>
 					<strong class="uplianda-brand-lockup__name"><?php esc_html_e( 'Analytics Dashboard for Cabin', 'uplink-analytics-dashboard-for-cabin' ); ?></strong>
 				</div>
-				<h1><?php esc_html_e( 'Analytics Dashboard Settings', 'uplink-analytics-dashboard-for-cabin' ); ?></h1>
+				<h1><?php esc_html_e( 'Cabin Dashboard Settings', 'uplink-analytics-dashboard-for-cabin' ); ?></h1>
 			</div>
 			<p class="uplianda-tagline"><?php esc_html_e( 'Configure charts, popular content, sustainability, demographics, and acquisition reports.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 			<p class="uplianda-tagline"><?php esc_html_e( 'An independent UplinkPress integration for Cabin. Not affiliated with or endorsed by Cabin.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
@@ -954,11 +969,11 @@ function uplianda_options_page() {
 						<?php esc_html_e( 'Usage', 'uplink-analytics-dashboard-for-cabin' ); ?>
 					</h3>
 					<div class="uplianda-card-content">
-						<h4><?php esc_html_e( 'Private Uplink Dashboard for Cabin', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
-						<p><?php esc_html_e( 'Open Uplink Dashboard for Cabin → Edit Dashboard to design a private admin page with core WordPress blocks and the active site styles. Repeat any Cabin report block and choose different modules for each instance.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
+						<h4><?php esc_html_e( 'Cabin Dashboard', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
+						<p><?php esc_html_e( 'Open Cabin Dashboard for an API-powered analytics workspace with section navigation, reporting periods, and light or dark mode. Dashboard access is controlled by the role settings on this page.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 
 						<h4><?php esc_html_e( 'Dashboard Widgets', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
-						<p><?php esc_html_e( 'Analytics, Popular Content, Sustainability, Demographics, and Sources appear after configuration. Use the module settings on this page and Dashboard Screen Options to tailor the view.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
+						<p><?php esc_html_e( 'Analytics, Popular Content, Sustainability, Demographics, and Sources appear after configuration. Disable WP dashboard widgets on this page to remove all five widgets from the WordPress Dashboard and its Screen Options.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 						
 						<h4><?php esc_html_e( 'Block Editor', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
 						<p><?php esc_html_e( 'Search for “Cabin” to find six blocks. Report blocks include module toggles in the block sidebar, and the Country Traffic Map has its own reporting period.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
@@ -1429,24 +1444,31 @@ function uplianda_get_country_map_data() {
  * Render the privacy-friendly country traffic map and its text equivalent.
  *
  * @param array $items      Normalized country traffic rows.
- * @param int   $date_range Reporting period in days.
+ * @param int   $date_range  Reporting period in days.
+ * @param string $title       Optional map title.
+ * @param string $value_label      Optional accessible value label.
+ * @param bool   $detailed_tooltip Whether to render the dashboard tooltip.
  * @return string Map markup.
  */
-function uplianda_render_country_map( $items, $date_range, $title = '' ) {
+function uplianda_render_country_map( $items, $date_range, $title = '', $value_label = '', $detailed_tooltip = false ) {
 	$map_data  = uplianda_get_country_map_data();
 	$geometry  = isset( $map_data['countries'] ) && is_array( $map_data['countries'] ) ? $map_data['countries'] : array();
 	$view_box  = isset( $map_data['view_box'] ) ? (string) $map_data['view_box'] : '0 0 960 500';
 	$by_code   = array();
 	$maximum   = 0;
+	$total     = 0;
 	$map_id    = wp_unique_id( 'uplianda-country-map-' );
 	$title_id  = $map_id . '-title';
 	$desc_id   = $map_id . '-description';
 	$title     = sanitize_text_field( (string) $title );
 	$title     = '' !== $title ? $title : __( 'Country Traffic', 'uplink-analytics-dashboard-for-cabin' );
+	$value_label = sanitize_text_field( (string) $value_label );
+	$value_label = '' !== $value_label ? $value_label : __( 'visits', 'uplink-analytics-dashboard-for-cabin' );
 
 	foreach ( $items as $item ) {
 		$by_code[ $item['code'] ] = (float) $item['value'];
 		$maximum = max( $maximum, (float) $item['value'] );
+		$total  += (float) $item['value'];
 	}
 
 	$rank_by_code = array_flip( array_column( $items, 'code' ) );
@@ -1474,6 +1496,7 @@ function uplianda_render_country_map( $items, $date_range, $title = '' ) {
 							<?php
 							$value = $by_code[ $code ] ?? 0;
 							$level = $value > 0 && $maximum > 0 ? max( 1, min( 5, (int) ceil( sqrt( $value / $maximum ) * 5 ) ) ) : 0;
+							$flag_path = UPLIANDA_PLUGIN_DIR . 'assets/flags/4x3/' . strtolower( $code ) . '.svg';
 							?>
 							<?php if ( $value > 0 ) : ?>
 								<path
@@ -1481,20 +1504,28 @@ function uplianda_render_country_map( $items, $date_range, $title = '' ) {
 									d="<?php echo esc_attr( $country['path'] ); ?>"
 									tabindex="<?php echo esc_attr( 0 === $rank_by_code[ $code ] ? '0' : '-1' ); ?>"
 									role="img"
-									aria-label="<?php echo esc_attr( sprintf( /* translators: 1: country name, 2: number of visits. */ __( '%1$s: %2$s visits', 'uplink-analytics-dashboard-for-cabin' ), $country['name'], number_format_i18n( $value ) ) ); ?>"
+									aria-label="<?php echo esc_attr( sprintf( /* translators: 1: country name, 2: value, 3: value label. */ __( '%1$s: %2$s %3$s', 'uplink-analytics-dashboard-for-cabin' ), $country['name'], number_format_i18n( $value ), $value_label ) ); ?>"
 									data-country-name="<?php echo esc_attr( $country['name'] ); ?>"
 									data-country-value="<?php echo esc_attr( number_format_i18n( $value ) ); ?>"
+									data-country-percent="<?php echo esc_attr( number_format_i18n( $total > 0 ? ( $value / $total ) * 100 : 0, 1 ) . '%' ); ?>"
+									<?php if ( $detailed_tooltip && file_exists( $flag_path ) ) : ?>data-country-flag="<?php echo esc_url( UPLIANDA_PLUGIN_URL . 'assets/flags/4x3/' . strtolower( $code ) . '.svg' ); ?>"<?php endif; ?>
 									data-country-rank="<?php echo esc_attr( $rank_by_code[ $code ] + 1 ); ?>"
-								><title><?php echo esc_html( sprintf( /* translators: 1: country name, 2: number of visits. */ __( '%1$s: %2$s visits', 'uplink-analytics-dashboard-for-cabin' ), $country['name'], number_format_i18n( $value ) ) ); ?></title></path>
+								><title><?php echo esc_html( sprintf( /* translators: 1: country name, 2: value, 3: value label. */ __( '%1$s: %2$s %3$s', 'uplink-analytics-dashboard-for-cabin' ), $country['name'], number_format_i18n( $value ), $value_label ) ); ?></title></path>
 							<?php else : ?>
 								<path class="uplianda-country-map__country uplianda-country-map__country--0" d="<?php echo esc_attr( $country['path'] ); ?>"></path>
 							<?php endif; ?>
 						<?php endforeach; ?>
 					</svg>
-					<div class="uplianda-country-map__tooltip" aria-hidden="true" hidden>
-						<strong data-uplianda-map-tooltip-name></strong>
-						<span class="uplianda-country-map__tooltip-value" data-uplianda-map-tooltip-value></span>
-						<span><?php esc_html_e( 'visits', 'uplink-analytics-dashboard-for-cabin' ); ?></span>
+					<div class="uplianda-country-map__tooltip<?php echo $detailed_tooltip ? ' uplianda-country-map__tooltip--detailed' : ''; ?>" aria-hidden="true" hidden>
+						<?php if ( $detailed_tooltip ) : ?>
+							<span class="uplianda-country-map__tooltip-country"><img data-uplianda-map-tooltip-flag alt="" width="28" height="21" hidden /><strong data-uplianda-map-tooltip-name></strong></span>
+							<span class="uplianda-country-map__tooltip-value" data-uplianda-map-tooltip-value></span>
+							<span class="uplianda-country-map__tooltip-meta"><span><?php echo esc_html( ucfirst( $value_label ) ); ?></span> <span data-uplianda-map-tooltip-percent></span></span>
+						<?php else : ?>
+							<strong data-uplianda-map-tooltip-name></strong>
+							<span class="uplianda-country-map__tooltip-value" data-uplianda-map-tooltip-value></span>
+							<span><?php echo esc_html( $value_label ); ?></span>
+						<?php endif; ?>
 					</div>
 					<div class="uplianda-country-map__legend" aria-hidden="true">
 						<span><?php esc_html_e( 'Fewer visits', 'uplink-analytics-dashboard-for-cabin' ); ?></span>
@@ -2232,7 +2263,7 @@ function uplianda_add_widget() {
 	$options = uplianda_get_options();
 	$api_key = isset( $options['api_key'] ) ? $options['api_key'] : '';
 	
-	if ( empty( $api_key ) || ! current_user_can( 'edit_posts' ) ) {
+	if ( empty( $options['dashboard_widgets_enabled'] ) || empty( $api_key ) || ! current_user_can( 'edit_posts' ) ) {
 		return;
 	}
 

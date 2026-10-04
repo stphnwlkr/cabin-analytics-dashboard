@@ -5,7 +5,7 @@ Tags:              analytics, cabin, dashboard, charts, privacy
 Requires at least: 6.9
 Requires PHP:      8.3
 Tested up to:      7.1
-Stable tag:        1.1.2
+Stable tag:        2.0.0
 License:           GPL-2.0-or-later
 License URI:       https://spdx.org/licenses/GPL-2.0-or-later.html
 
@@ -22,7 +22,7 @@ The Cabin Analytics API is available to Cabin PRO accounts.
 **Features:**
 
 * Dashboard widget for viewing analytics in WordPress admin
-* Private Uplink Dashboard for Cabin, designed with blocks for authorized WordPress users
+* Responsive Cabin Dashboard for authorized WordPress users
 * Polished standalone Uplink Popular Content for Cabin dashboard widget with title, domain, controls, and summary/detail metrics
 * Separate Sustainability, Demographics, and Sources dashboard widgets
 * Per-module visibility controls for dashboard reports, blocks, and shortcodes
@@ -61,11 +61,11 @@ Parameters:
 * `date_range` - `1`, `7`, `14`, `30`, or `90`
 * `title` - Optional heading text
 
-If no shortcode title or date range is provided, the plugin uses the values configured in Settings → Uplink Analytics.
+If no shortcode title or date range is provided, the plugin uses the values configured in Cabin Dashboard → Settings.
 
 **Dashboard Popular Content:**
 
-Popular Content is available as a standalone WordPress dashboard widget titled “Uplink Popular Content for Cabin.” It can be shown, hidden, and moved using the standard WordPress Dashboard Screen Options. The widget, block, and shortcode share the same presentation: title and domain, date range controls, quantity controls for 5, 10, 20, or 50 items, and summary/detail entries with page views, unique visitors, and Attention. Attention uses Cabin's approximate duration style, such as `~52s` or `~2m`. Per-page CO₂ is displayed only when Cabin returns a positive value.
+Popular Content is available as a standalone WordPress dashboard widget titled “Uplink Popular Content for Cabin” when WP dashboard widgets are enabled in Cabin Dashboard → Settings. It can be hidden, shown, and moved using the standard WordPress Dashboard Screen Options. Disabling WP dashboard widgets unregisters all five Cabin widgets, so they no longer appear in Screen Options. The widget, block, and shortcode share the same presentation: title and domain, date range controls, quantity controls for 5, 10, 20, or 50 items, and summary/detail entries with page views, unique visitors, and Attention. Attention uses Cabin's approximate duration style, such as `~52s` or `~2m`. Per-page CO₂ is displayed only when Cabin returns a positive value.
 
 **Sustainability, Demographics, and Sources:**
 
@@ -91,7 +91,7 @@ Every module is enabled by default. Set a shortcode module to `false` to hide it
 `[uplianda_demographics devices="true" countries="true" languages="false" browsers="false"]`
 `[uplianda_sources traffic_sources="true" referrers="false"]`
 
-The equivalent block settings are available in the block sidebar. Every block also provides a Heading field. Defaults are Site Traffic, Top Content, Sustainability, Demographics, Sources, and Country Traffic. Dashboard-widget modules are configured under Settings → Uplink Analytics.
+The equivalent block settings are available in the block sidebar. Every block also provides a Heading field. Defaults are Site Traffic, Top Content, Sustainability, Demographics, Sources, and Country Traffic. Dashboard-widget modules are configured under Cabin Dashboard → Settings.
 
 **Country Traffic Map:**
 
@@ -103,17 +103,17 @@ Shortcode:
 
 `[uplianda_country_map date_range="30" title="Traffic by Country"]`
 
-**Private Uplink Dashboard for Cabin:**
+**Cabin Dashboard:**
 
-Uplink Dashboard for Cabin adds a backend-only analytics page to the WordPress admin menu. Administrators can open Uplink Dashboard for Cabin → Edit Dashboard and design the page freely with the core block editor. Core blocks such as Columns, Group, Heading, Tabs, and Spacer can be combined with any Cabin block.
+Uplink Dashboard for Cabin adds a backend-only analytics page to the WordPress admin menu. It presents the Cabin API data in a focused report with section navigation, selectable reporting periods, and light or dark mode. Access is controlled by role from the plugin settings.
 
-The protected dashboard viewer uses an isolated document with a builder-neutral, accessible style foundation. Open Uplink Dashboard for Cabin and choose Customize Styles to adjust colors, typography, and spacing in a live-preview drawer. Page colors and report-surface text colors are independent, and charts and progress indicators have dedicated color controls. Closing without saving restores the saved design; Save Styles persists the validated CSS tokens. Core block controls and explicit user styles can still override the low-specificity defaults.
+The dashboard uses a purpose-built, responsive report layout inspired by Cabin's public analytics experience. A side rail keeps long reports navigable on larger screens, reporting periods are available in the header, and the local light/dark preference follows the user between visits. The page uses bundled fonts and makes no external font request.
 
-Each Cabin report block keeps its own date range and module choices. For example, add four Demographics blocks in different locations and configure them separately for devices, countries, languages, and browsers. The saved page is private, excluded from public queries and search, and its REST endpoints require dashboard authorization.
+Each Cabin report block keeps its own date range and module choices. For example, add four Demographics blocks in different locations and configure them separately for devices, countries, languages, and browsers.
 
-Administrators have access by default and always retain access. Additional WordPress roles can be authorized under Settings → Uplink Analytics → Private Uplink Dashboard for Cabin. Authorized roles can both view the dashboard and edit its layout.
+Administrators have access by default and always retain access. Additional WordPress roles can be authorized under Cabin Dashboard → Settings → Cabin Dashboard.
 
-The private dashboard is optional. Clear Enable Private Dashboard in that settings section to remove it from the WordPress admin menu without deleting its saved layout. Cabin blocks remain available for posts and pages.
+The Cabin Dashboard is always available to authorized roles. Clear Enable WP dashboard widgets to unregister the five widgets from the standard WordPress Dashboard without changing the Cabin Dashboard, blocks, or shortcodes.
 
 **Chart Shortcode:**
 
@@ -137,10 +137,10 @@ Parameters:
 
 1. Upload the plugin files to the `/wp-content/plugins/uplink-analytics-dashboard-for-cabin` directory, or install the plugin through the WordPress plugins screen.
 2. Activate the plugin through the Plugins screen in WordPress.
-3. Navigate to Settings → Uplink Analytics.
+3. Navigate to Cabin Dashboard → Settings.
 4. Add your Cabin Analytics API key and default domain.
 5. Add any Cabin chart, Popular Content, Sustainability, Demographics, Sources, or Country Traffic Map block, or use the included shortcodes.
-6. Optionally open Uplink Dashboard for Cabin → Edit Dashboard to create a private analytics workspace with WordPress blocks, then use Customize Styles for live color, typography, and spacing adjustments.
+6. Optionally open Cabin Dashboard to use the private, API-powered analytics workspace.
 
 == wp-config.php Defaults ==
 
@@ -153,7 +153,7 @@ Site owners can define defaults in `wp-config.php`. Constants take precedence ov
 `define( 'UPLIANDA_DASHBOARD_URL', 'https://withcabin.com' );`
 `define( 'UPLIANDA_POPULAR_CONTENT_TITLE', 'Top Content' );`
 `define( 'UPLIANDA_POPULAR_CONTENT_DATE_RANGE', '30' );`
-`define( 'UPLIANDA_PRIVATE_DASHBOARD_ENABLED', true );`
+`define( 'UPLIANDA_DASHBOARD_WIDGETS_ENABLED', true );`
 
 Dashboard module defaults can also be locked with boolean constants. Available suffixes are:
 
@@ -194,15 +194,15 @@ The plugin requests top page data from Cabin Analytics, normalizes each returned
 
 = Can Popular Content appear on the WordPress dashboard? =
 
-Yes. The plugin registers a standalone dashboard widget titled “Uplink Popular Content for Cabin.” Manage its visibility and placement from the WordPress Dashboard Screen Options. The widget includes controls for date range and item count. The default date range is controlled in Settings → Uplink Analytics.
+Yes. Enable WP dashboard widgets under Cabin Dashboard → Settings. The plugin then registers a standalone widget titled “Uplink Popular Content for Cabin.” Manage its visibility and placement from the WordPress Dashboard Screen Options. Turning off WP dashboard widgets unregisters it and the other Cabin widgets, removing their entries from Screen Options. The widget includes controls for date range and item count. The default date range is controlled in Cabin Dashboard → Settings.
 
 = Can I build a custom analytics page inside WordPress admin? =
 
-Yes. Open Uplink Dashboard for Cabin → Edit Dashboard and use the core WordPress block editor. The page is available only in WordPress admin to authorized roles. It inherits the active site design, and you can repeat Cabin blocks and configure every instance independently.
+The Cabin Dashboard is a purpose-built WordPress admin page available only to authorized roles. It does not use a public post or custom post type. Blocks and shortcodes remain available separately for layouts you create in the WordPress editor.
 
 = What date ranges are supported for Popular Content? =
 
-Popular Content supports `1`, `7`, `14`, `30`, and `90` day ranges. The default is controlled in Settings → Uplink Analytics.
+Popular Content supports `1`, `7`, `14`, `30`, and `90` day ranges. The default is controlled in Cabin Dashboard → Settings.
 
 = Does this work with Cabin Analytics v1 or v2? =
 
@@ -216,6 +216,16 @@ This plugin uses the Cabin Analytics API v1. Visit https://withcabin.com for cur
 4. Custom private dashboard combining the Country Traffic Map, Site Traffic chart, Popular Content, and sustainability summary.
 
 == Changelog ==
+
+= 2.0.0 =
+* Breaking: replaced the custom-post-type dashboard and editor workflow with an always-available Cabin Analytics page in WordPress admin. Existing private dashboard post layouts are no longer used.
+* Kept existing Cabin blocks and shortcodes unchanged.
+* Added a responsive Cabin-style report with light and dark themes, fixed period controls, section navigation, and bundled Public Sans and Wittgenstein fonts.
+* Added reports for all available Cabin API data, including events, attention, screen sizes, operating systems, countries, sources, and environmental metrics.
+* Added interactive chart modes, Cabin-style data balloons, country flags, an accessible world map, search, pagination, and View all controls.
+* Replaced Enable Private Dashboard with Enable WP dashboard widgets. The Cabin Dashboard remains available when widgets are disabled.
+* Preserved saved settings during plugin updates and kept Settings under the Cabin Dashboard menu.
+* Added responsive layouts for narrower WordPress admin widths and smoother period and list transitions.
 
 = 1.1.2 =
 * Restored a visible View Dashboard button in the private dashboard editor and removed the hidden Options-menu action.

@@ -5,26 +5,32 @@ Tags:              analytics, cabin, dashboard, charts, privacy
 Requires at least: 6.9
 Requires PHP:      8.3
 Tested up to:      7.1
-Stable tag:        2.0.0
+Stable tag:        2.0.1
 License:           GPL-2.0-or-later
 License URI:       https://spdx.org/licenses/GPL-2.0-or-later.html
 
-Display Cabin Analytics charts, dashboard widgets, shortcodes, and popular content lists in WordPress.
+View Cabin Analytics in a Cabin-style WordPress dashboard, with optional widgets, blocks, shortcodes, and popular content.
 
 == Description ==
 
-Uplink Analytics Dashboard for Cabin integrates Cabin Analytics into your WordPress site. It provides dashboard widgets, Gutenberg blocks, shortcodes, and popular content output powered by the Cabin Analytics API.
+Uplink Analytics Dashboard for Cabin brings your Cabin data into WordPress. Its main Cabin Dashboard is a responsive admin report for a quick look at traffic, content, sources, geography, devices, attention, events, and environmental data without leaving WordPress.
+
+The plugin also provides optional WordPress dashboard widgets, Gutenberg blocks, shortcodes, and popular content lists powered by the Cabin Analytics API. Existing blocks and shortcodes remain separate from the admin dashboard, so you can publish selected reports without exposing the private WordPress admin page.
 
 This is an independent UplinkPress plugin. It is not affiliated with, endorsed by, or an official product of Cabin. Learn more about the plugin at [uplink.press](https://uplink.press/code/uplink-analytics-dashboard-for-cabin/).
 
-The Cabin Analytics API is available to Cabin PRO accounts.
+Cabin API keys are currently available on the Cabin Plus and Scale plans.
 
 **Features:**
 
-* Dashboard widget for viewing analytics in WordPress admin
-* Responsive Cabin Dashboard for authorized WordPress users
-* Polished standalone Uplink Popular Content for Cabin dashboard widget with title, domain, controls, and summary/detail metrics
-* Separate Sustainability, Demographics, and Sources dashboard widgets
+* Responsive Cabin-style admin dashboard with light and dark modes
+* Reports for summary traffic, top pages, referrals, sources, bounce rate, countries, languages, devices, screen sizes, browsers, operating systems, attention, and events
+* AI agent, energy, carbon, and scroll-depth reports when Cabin returns that data for the connected plan
+* Reporting periods for today, 7, 14, 30, or 90 days in the admin dashboard
+* Search, pagination, View all controls, chart tooltips, country flags, and an accessible world map
+* Role-based dashboard access, with administrator access retained
+* Five optional WordPress dashboard widgets for Analytics, Popular Content, Sustainability, Demographics, and Sources
+* Standalone Uplink Popular Content for Cabin dashboard widget with title, domain, controls, and summary/detail metrics
 * Per-module visibility controls for dashboard reports, blocks, and shortcodes
 * Uplink Site Traffic for Cabin block for analytics charts
 * Gutenberg block for Popular Content with the same interactive controls and expandable metrics as the Dashboard widget
@@ -42,6 +48,7 @@ The Cabin Analytics API is available to Cabin PRO accounts.
 * Configurable date ranges
 * Global settings for API key, default domain, chart options, and popular content defaults
 * Responsive front-end output
+* Bundled dashboard fonts, flags, and map geometry with no runtime font, flag, or map service request
 
 **Popular Content:**
 
@@ -91,7 +98,7 @@ Every module is enabled by default. Set a shortcode module to `false` to hide it
 `[uplianda_demographics devices="true" countries="true" languages="false" browsers="false"]`
 `[uplianda_sources traffic_sources="true" referrers="false"]`
 
-The equivalent block settings are available in the block sidebar. Every block also provides a Heading field. Defaults are Site Traffic, Top Content, Sustainability, Demographics, Sources, and Country Traffic. Dashboard-widget modules are configured under Cabin Dashboard → Settings.
+The equivalent block settings are available in the block sidebar. Every block also provides a Heading field. Defaults are Site Traffic, Top Content, Sustainability, Demographics, Sources, and Country Traffic. Dashboard-widget modules are configured under Cabin Dashboard → Settings. Each report block keeps its own date range and module choices.
 
 **Country Traffic Map:**
 
@@ -105,11 +112,11 @@ Shortcode:
 
 **Cabin Dashboard:**
 
-Uplink Dashboard for Cabin adds a backend-only analytics page to the WordPress admin menu. It presents the Cabin API data in a focused report with section navigation, selectable reporting periods, and light or dark mode. Access is controlled by role from the plugin settings.
+Cabin Dashboard adds a backend-only analytics page to the WordPress admin menu. It presents the available Cabin API data in a focused report with section navigation, selectable reporting periods, and light or dark mode. Access is controlled by role from the plugin settings.
 
-The dashboard uses a purpose-built, responsive report layout inspired by Cabin's public analytics experience. A side rail keeps long reports navigable on larger screens, reporting periods are available in the header, and the local light/dark preference follows the user between visits. The page uses bundled fonts and makes no external font request.
+The dashboard closely follows Cabin's public analytics layout, typography, spacing, controls, and color palettes. A side rail keeps long reports navigable on larger screens and disappears when the WordPress admin area gets narrower. The fixed header keeps reporting periods and dashboard actions available. The local light or dark preference follows the user between visits.
 
-Each Cabin report block keeps its own date range and module choices. For example, add four Demographics blocks in different locations and configure them separately for devices, countries, languages, and browsers.
+Charts support line and bar views with data balloons. Longer data sets include search, pagination, percentage or value controls, and View all. The page uses bundled fonts and local assets, so it makes no external font, flag, or map request.
 
 Administrators have access by default and always retain access. Additional WordPress roles can be authorized under Cabin Dashboard → Settings → Cabin Dashboard.
 
@@ -140,7 +147,7 @@ Parameters:
 3. Navigate to Cabin Dashboard → Settings.
 4. Add your Cabin Analytics API key and default domain.
 5. Add any Cabin chart, Popular Content, Sustainability, Demographics, Sources, or Country Traffic Map block, or use the included shortcodes.
-6. Optionally open Cabin Dashboard to use the private, API-powered analytics workspace.
+6. Open Cabin Dashboard to view the API-powered analytics report in WordPress admin.
 
 == wp-config.php Defaults ==
 
@@ -174,7 +181,7 @@ For example: `define( 'UPLIANDA_DASHBOARD_DEMOGRAPHICS_BROWSERS', false );`
 
 This plugin connects to the Cabin Analytics API at `https://api.withcabin.com/v1/analytics` to retrieve analytics data. It sends the configured domain, requested date range, requested data scope, list limit, and the administrator-provided API key. Requests occur when an analytics chart, Popular Content display, dashboard insight widget, Country Traffic Map, or public insight block or shortcode needs uncached data. Responses are cached temporarily in WordPress.
 
-Cabin is a third-party service. This independent UplinkPress plugin is not affiliated with or endorsed by Cabin. A Cabin PRO account and API key are required. Review [Cabin](https://withcabin.com/?utm_campaign=wp_widget&utm_medium=web&utm_source=sw) before use.
+Cabin is a third-party service. This independent UplinkPress plugin is not affiliated with or endorsed by Cabin. Cabin currently provides API keys on its Plus and Scale plans. Review [Cabin's API documentation](https://docs.withcabin.com/api) before use.
 
 The Country Traffic Map includes simplified geographic shapes generated at build time from [Natural Earth](https://www.naturalearthdata.com/downloads/110m-cultural-vectors/), whose map data is in the public domain. No request is made to Natural Earth or any other map provider when the plugin runs.
 
@@ -182,11 +189,11 @@ The Country Traffic Map includes simplified geographic shapes generated at build
 
 = Where do I get a Cabin Analytics API key? =
 
-Visit https://withcabin.com and log into your account. Navigate to your site settings to generate an API key.
+Cabin currently provides API keys on its Plus and Scale plans. Sign in to Cabin, open the API keys section of your account settings, select New Key, and choose the domains that key may access.
 
 = Can I display analytics for multiple domains? =
 
-Yes. You can configure a default domain in the settings, and individual shortcode or block instances can override it.
+You can set one default domain for the Cabin Dashboard, Popular Content, report widgets, and report blocks. The Site Traffic block and `[uplianda]` shortcode can override that default domain for an individual chart. The API key must have access to every domain you request.
 
 = How does Popular Content work? =
 
@@ -196,9 +203,13 @@ The plugin requests top page data from Cabin Analytics, normalizes each returned
 
 Yes. Enable WP dashboard widgets under Cabin Dashboard → Settings. The plugin then registers a standalone widget titled “Uplink Popular Content for Cabin.” Manage its visibility and placement from the WordPress Dashboard Screen Options. Turning off WP dashboard widgets unregisters it and the other Cabin widgets, removing their entries from Screen Options. The widget includes controls for date range and item count. The default date range is controlled in Cabin Dashboard → Settings.
 
-= Can I build a custom analytics page inside WordPress admin? =
+= Is the Cabin Dashboard stored as a WordPress page or custom post type? =
 
-The Cabin Dashboard is a purpose-built WordPress admin page available only to authorized roles. It does not use a public post or custom post type. Blocks and shortcodes remain available separately for layouts you create in the WordPress editor.
+No. Cabin Dashboard is a purpose-built WordPress admin page available only to authorized roles. It is not a post and does not use a custom post type. Blocks and shortcodes remain available for layouts you create in the WordPress editor.
+
+= Who can view the Cabin Dashboard? =
+
+Administrators always have access. An administrator can grant access to other WordPress roles under Cabin Dashboard → Settings. The dashboard stays available even when the optional WordPress dashboard widgets are disabled.
 
 = What date ranges are supported for Popular Content? =
 
@@ -210,12 +221,19 @@ This plugin uses the Cabin Analytics API v1. Visit https://withcabin.com for cur
 
 == Screenshots ==
 
-1. Settings screen for connecting Cabin, choosing defaults, controlling dashboard access, and selecting report modules.
-2. Responsive Demographics report showing device, country, language, and browser data.
-3. Sustainability and Sources reports showing environmental metrics, acquisition channels, and referrers.
-4. Custom private dashboard combining the Country Traffic Map, Site Traffic chart, Popular Content, and sustainability summary.
+1. Complete Cabin Dashboard in dark mode, showing the available report sections in one WordPress admin page.
+2. Summary and Top Pages reports with period controls, chart modes, search, pagination, and measurement bars.
+3. Global reach report with the local world map, country flags, search, pagination, and value controls.
+4. Responsive dashboard layout with the side rail removed and report controls retained on a narrower WordPress admin screen.
+5. Redesigned settings page with clear sections for the Cabin connection, dashboard access, content defaults, and optional WordPress dashboard widgets.
 
 == Changelog ==
+
+= 2.0.1 =
+* Refreshed the WordPress.org screenshots with the new Cabin Dashboard and settings experience.
+* Reorganized and restyled settings for clearer connection, dashboard, content, and widget controls.
+* Hidden widget-only module settings when WordPress dashboard widgets are disabled, while preserving their saved values.
+* Removed the light-theme flash during dashboard range changes and improved the loading transition.
 
 = 2.0.0 =
 * Breaking: replaced the custom-post-type dashboard and editor workflow with an always-available Cabin Analytics page in WordPress admin. Existing private dashboard post layouts are no longer used.

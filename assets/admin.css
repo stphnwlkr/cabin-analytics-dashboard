@@ -228,6 +228,315 @@
 	padding-left: 18px;
 }
 
+/* Match the shared Uplink admin settings language used by Admin Menu Manager. */
+.uplianda-admin-wrap {
+	--uplianda-admin-accent: #704b39;
+	--uplianda-admin-accent-dark: #543629;
+	--uplianda-admin-accent-soft: #f5eee7;
+	--uplianda-admin-border: #ded6ca;
+	--uplianda-admin-canvas: #f2ece3;
+	--uplianda-admin-ink: #2b211c;
+	--uplianda-admin-muted: #6d625b;
+	--uplianda-admin-surface: #fffdf9;
+	container-name: uplianda-admin;
+	container-type: inline-size;
+	margin-top: 20px;
+	max-width: 1240px;
+}
+
+body:has(.uplianda-admin-wrap) #wpcontent,
+body:has(.uplianda-admin-wrap) #wpbody,
+body:has(.uplianda-admin-wrap) #wpbody-content {
+	background: var(--uplianda-admin-canvas);
+}
+
+.uplianda-admin-header {
+	align-items: center;
+	background: linear-gradient(135deg, #001d38 0%, #003362 58%, #0071cc 100%);
+	border: 0;
+	border-radius: 12px;
+	box-shadow: 0 8px 28px rgba(0, 51, 98, .22);
+	color: #fff;
+	display: flex;
+	justify-content: space-between;
+	margin: 0 0 24px;
+	overflow: hidden;
+	padding: 30px 36px;
+	position: relative;
+}
+
+.uplianda-admin-header::after {
+	background: radial-gradient(circle, rgba(255, 255, 255, .2) 0 2px, transparent 3px);
+	background-size: 18px 18px;
+	content: "";
+	height: 180px;
+	opacity: .55;
+	position: absolute;
+	right: -18px;
+	top: -35px;
+	width: 280px;
+}
+
+.uplianda-header-content {
+	gap: 22px;
+	position: relative;
+	z-index: 1;
+}
+
+.uplianda-header-content > div {
+	min-width: 0;
+}
+
+.uplianda-brand-lockup {
+	align-items: center;
+	background: #fff;
+	border: 1px solid rgba(255, 255, 255, .7);
+	border-radius: 10px;
+	box-shadow: 0 8px 22px rgba(0, 20, 42, .22);
+	display: flex;
+	flex: 0 0 112px;
+	height: 112px;
+	justify-content: center;
+}
+
+.uplianda-brand-lockup img {
+	display: block;
+	height: 72px;
+	width: 72px;
+}
+
+.uplianda-header-meta {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.uplianda-header-eyebrow {
+	color: #b9e1ff;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: .12em;
+	text-transform: uppercase;
+}
+
+.uplianda-header-version {
+	background: rgba(255, 255, 255, .13);
+	border: 1px solid rgba(255, 255, 255, .28);
+	border-radius: 999px;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 1.2;
+	padding: 4px 8px;
+}
+
+.uplianda-header-title {
+	font-size: clamp(24px, 3vw, 34px);
+	line-height: 1.15;
+	margin: 6px 0 10px;
+}
+
+.uplianda-admin-header p {
+	color: rgba(255, 255, 255, .84);
+	font-size: 15px;
+	margin: 0;
+	max-width: 650px;
+}
+
+.uplianda-admin-content {
+	gap: 24px;
+	grid-template-columns: minmax(0, 2.2fr) minmax(280px, .8fr);
+	margin-top: 0;
+}
+
+.uplianda-admin-main,
+.uplianda-admin-sidebar,
+.uplianda-form {
+	align-content: start;
+	display: grid;
+	gap: 24px;
+}
+
+.uplianda-form {
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	padding: 0;
+}
+
+.uplianda-settings-card,
+.uplianda-card,
+.uplianda-form-actions {
+	background: var(--uplianda-admin-surface);
+	border: 1px solid var(--uplianda-admin-border);
+	border-radius: 14px;
+	box-shadow: 0 4px 18px rgba(67, 48, 37, .05);
+	box-sizing: border-box;
+}
+
+.uplianda-settings-card {
+	overflow: clip;
+}
+
+.uplianda-settings-card__header {
+	background: #faf6f0;
+	border-bottom: 1px solid #e2ddd3;
+	padding: 24px;
+}
+
+.uplianda-settings-card__header > span {
+	color: #646970;
+	display: block;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: .14em;
+	text-transform: uppercase;
+}
+
+.uplianda-settings-card__header h2 {
+	color: var(--uplianda-admin-ink);
+	font-size: 24px;
+	line-height: 1.2;
+	margin: 7px 0 8px;
+	padding: 0;
+}
+
+.uplianda-settings-card__header p {
+	color: #646970;
+	font-size: 14px;
+	line-height: 1.5;
+	margin: 0;
+	max-width: 680px;
+}
+
+.uplianda-settings-card__body {
+	padding: 4px 24px;
+}
+
+.uplianda-settings-card .form-table {
+	margin: 0;
+}
+
+.uplianda-settings-card .form-table tr + tr {
+	border-top: 1px solid #e2e4e7;
+}
+
+.uplianda-settings-card .form-table th,
+.uplianda-settings-card .form-table td {
+	padding-bottom: 22px;
+	padding-top: 22px;
+}
+
+.uplianda-settings-card .form-table th {
+	color: var(--uplianda-admin-ink);
+	font-size: 14px;
+	font-weight: 600;
+	padding-right: 24px;
+	width: 205px;
+}
+
+.uplianda-settings-card input[type="text"],
+.uplianda-settings-card input[type="password"],
+.uplianda-settings-card input[type="url"],
+.uplianda-settings-card select {
+	border-color: #cfc5b8;
+	border-radius: 8px;
+	box-sizing: border-box;
+	min-height: 42px;
+}
+
+.uplianda-input,
+.uplianda-select {
+	width: min(100%, 520px);
+}
+
+.uplianda-description {
+	color: var(--uplianda-admin-muted);
+	line-height: 1.45;
+	max-width: 620px;
+}
+
+.uplianda-setting-check {
+	align-items: flex-start;
+	display: flex;
+	gap: 8px;
+}
+
+.uplianda-setting-check input {
+	flex: 0 0 auto;
+	margin-top: 2px;
+}
+
+.uplianda-widget-only-setting[hidden],
+.uplianda-widget-only-setting.is-hidden {
+	display: none;
+}
+
+.uplianda-module-groups {
+	gap: 16px;
+}
+
+.uplianda-module-group {
+	background: #faf6f0;
+	border-color: var(--uplianda-admin-border);
+	border-radius: 10px;
+	padding: 16px;
+}
+
+.uplianda-module-group legend {
+	color: var(--uplianda-admin-muted);
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: .12em;
+	text-transform: uppercase;
+}
+
+.uplianda-access-roles {
+	gap: 12px;
+}
+
+.uplianda-form-actions {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 0;
+	padding: 18px 24px;
+}
+
+.uplianda-admin-wrap .button {
+	border-color: #b9ab9d;
+	border-radius: 8px;
+	color: #4d392e;
+}
+
+.uplianda-admin-wrap .button-primary {
+	background: var(--uplianda-admin-accent);
+	border-color: var(--uplianda-admin-accent);
+	color: #fff;
+}
+
+.uplianda-admin-wrap .button-primary:hover,
+.uplianda-admin-wrap .button-primary:focus {
+	background: var(--uplianda-admin-accent-dark);
+	border-color: var(--uplianda-admin-accent-dark);
+	color: #fff;
+}
+
+.uplianda-card {
+	margin: 0;
+	padding: 24px;
+}
+
+.uplianda-card-title,
+.uplianda-card-content h4 {
+	color: var(--uplianda-admin-ink);
+}
+
+.uplianda-card-content p,
+.uplianda-card-content li {
+	color: var(--uplianda-admin-muted);
+}
+
 @media (max-width: 1100px) {
 	.uplianda-admin-content {
 		grid-template-columns: 1fr;

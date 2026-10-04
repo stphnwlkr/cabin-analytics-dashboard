@@ -72,6 +72,7 @@
 	transition: background-color 160ms ease, color 160ms ease;
 }
 
+html[data-uplianda-dashboard-theme="dark"] .uplianda-private-dashboard,
 .uplianda-private-dashboard[data-theme="dark"] {
 	--uplianda-dash-accent: #69a9b5;
 	--uplianda-dash-accent-soft: #20373a;
@@ -233,13 +234,12 @@
 	grid-template-columns: 210px minmax(0, 1fr);
 	margin: 0 auto;
 	max-width: 1760px;
-	transition: filter 140ms ease, opacity 140ms ease, transform 140ms ease;
+	transition: filter 140ms ease, transform 140ms ease;
 }
 
 @keyframes uplianda-dashboard-enter {
 	from {
-		filter: blur(3px);
-		opacity: .42;
+		filter: blur(2px) brightness(.88);
 		transform: translateY(2px);
 	}
 
@@ -255,8 +255,7 @@
 }
 
 .uplianda-private-dashboard.is-navigating .uplianda-dash-shell {
-	filter: blur(3px);
-	opacity: .42;
+	filter: blur(2px) brightness(.88);
 	pointer-events: none;
 	transform: translateY(2px);
 }

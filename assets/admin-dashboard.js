@@ -34,6 +34,7 @@
 	}
 
 	function setTheme( theme ) {
+		document.documentElement.dataset.upliandaDashboardTheme = theme;
 		dashboard.dataset.theme = theme;
 		if ( toggle ) {
 			toggle.setAttribute( 'aria-pressed', theme === 'dark' ? 'true' : 'false' );

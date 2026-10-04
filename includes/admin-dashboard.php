@@ -98,6 +98,33 @@ function uplianda_register_private_dashboard_menu() {
 }
 add_action( 'admin_menu', 'uplianda_register_private_dashboard_menu', 20 );
 
+/**
+ * Paint the saved dashboard theme before WordPress renders the page body.
+ *
+ * Date-range controls perform a normal document navigation so the API response
+ * remains server rendered. Setting the canvas color in the document head keeps
+ * that navigation from exposing WordPress's default white background.
+ */
+function uplianda_print_private_dashboard_theme_bootstrap() {
+	$style = '
+		html { background: var(--uplianda-dashboard-boot-bg, #f7f7f5); }
+		body.toplevel_page_uplianda-dashboard,
+		body.toplevel_page_uplianda-dashboard #wpwrap,
+		body.toplevel_page_uplianda-dashboard #wpcontent,
+		body.toplevel_page_uplianda-dashboard #wpbody,
+		body.toplevel_page_uplianda-dashboard #wpbody-content {
+			background-color: var(--uplianda-dashboard-boot-bg, #f7f7f5);
+		}
+		@view-transition { navigation: auto; }
+	';
+
+	$script = "(function(){var theme='light';try{var saved=window.localStorage.getItem('uplianda-dashboard-theme');theme=saved==='dark'||saved==='light'?saved:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}catch(error){theme=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}var background=theme==='dark'?'#151515':'#f7f7f5';document.documentElement.dataset.upliandaDashboardTheme=theme;document.documentElement.style.setProperty('--uplianda-dashboard-boot-bg',background);document.documentElement.style.colorScheme=theme;}());";
+
+	printf( '<style id="uplianda-dashboard-theme-bootstrap">%s</style>', $style ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static plugin-owned CSS, not user input.
+	wp_print_inline_script_tag( $script, array( 'id' => 'uplianda-dashboard-theme-bootstrap-js' ) );
+}
+add_action( 'admin_head-toplevel_page_uplianda-dashboard', 'uplianda_print_private_dashboard_theme_bootstrap', 0 );
+
 /** Enqueue standalone dashboard assets. */
 function uplianda_prepare_private_dashboard( $hook_suffix ) {
 	if ( 'toplevel_page_uplianda-dashboard' !== $hook_suffix ) {
@@ -540,8 +567,8 @@ function uplianda_dashboard_widgets_enabled_render() {
 	$options = uplianda_get_options();
 	?>
 	<input type="hidden" name="uplianda_options[dashboard_widgets_enabled]" value="0" />
-	<label for="uplianda_dashboard_widgets_enabled"><input id="uplianda_dashboard_widgets_enabled" type="checkbox" name="uplianda_options[dashboard_widgets_enabled]" value="1" <?php checked( ! empty( $options['dashboard_widgets_enabled'] ) ); ?> /> <?php esc_html_e( 'Show Cabin report widgets on the WordPress Dashboard.', 'uplink-analytics-dashboard-for-cabin' ); ?></label>
-	<p class="uplianda-description"><?php esc_html_e( 'Turning this off removes the Cabin widgets from the WordPress Dashboard and its Screen Options. The Cabin Dashboard remains available.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
+	<label class="uplianda-setting-check" for="uplianda_dashboard_widgets_enabled"><input id="uplianda_dashboard_widgets_enabled" data-uplianda-widget-toggle type="checkbox" name="uplianda_options[dashboard_widgets_enabled]" value="1" <?php checked( ! empty( $options['dashboard_widgets_enabled'] ) ); ?> /> <span><?php esc_html_e( 'Show the five Cabin widgets on the WordPress Dashboard.', 'uplink-analytics-dashboard-for-cabin' ); ?></span></label>
+	<p class="uplianda-description"><?php esc_html_e( 'Turning this off unregisters the widgets and removes them from Screen Options. It does not affect the Cabin Dashboard, blocks, or shortcodes.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 	<?php
 }
 
@@ -549,13 +576,13 @@ function uplianda_dashboard_widgets_enabled_render() {
 function uplianda_access_roles_render() {
 	$selected = uplianda_get_access_roles();
 	?>
-	<fieldset class="uplianda-access-roles"><legend class="screen-reader-text"><?php esc_html_e( 'Roles allowed to view the Uplink Dashboard for Cabin', 'uplink-analytics-dashboard-for-cabin' ); ?></legend>
+	<fieldset class="uplianda-access-roles"><legend class="screen-reader-text"><?php esc_html_e( 'Roles allowed to view the Cabin Dashboard', 'uplink-analytics-dashboard-for-cabin' ); ?></legend>
 	<?php foreach ( wp_roles()->roles as $slug => $role_data ) : $administrator = 'administrator' === $slug; ?><label><input type="checkbox" name="uplianda_options[dashboard_access_roles][]" value="<?php echo esc_attr( $slug ); ?>" <?php checked( in_array( $slug, $selected, true ) ); ?> <?php disabled( $administrator ); ?> /> <?php echo esc_html( translate_user_role( $role_data['name'] ) ); ?></label><?php if ( $administrator ) : ?><input type="hidden" name="uplianda_options[dashboard_access_roles][]" value="administrator" /><?php endif; endforeach; ?>
-	</fieldset><p class="uplianda-description"><?php esc_html_e( 'Administrators always retain access. Selected roles can view the private dashboard.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
+	</fieldset><p class="uplianda-description"><?php esc_html_e( 'Administrators always retain access. Select any additional roles that may view the Cabin Dashboard.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 	<?php
 }
 
 /** Private dashboard settings section description. */
 function uplianda_private_section_callback() {
-	echo '<p class="uplianda-section-description">' . esc_html__( 'Control WordPress dashboard widgets and choose who can view the API-powered Cabin Dashboard.', 'uplink-analytics-dashboard-for-cabin' ) . '</p>';
+	echo '<p class="uplianda-section-description">' . esc_html__( 'Set the external Cabin link and choose who can open the analytics dashboard inside WordPress.', 'uplink-analytics-dashboard-for-cabin' ) . '</p>';
 }

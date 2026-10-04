@@ -3,7 +3,7 @@
  * Plugin Name:       Uplink Analytics Dashboard for Cabin
  * Plugin URI:        https://uplink.press/code/uplink-analytics-dashboard-for-cabin/
  * Description:       Display Cabin Analytics data with interactive charts via dashboard widgets, blocks, and shortcodes.
- * Version:           2.0.0
+ * Version:           2.0.1
  * Requires at least: 6.9
  * Requires PHP:      8.3
  * Author:            UplinkPress
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'UPLIANDA_VERSION', '2.0.0' );
+define( 'UPLIANDA_VERSION', '2.0.1' );
 define( 'UPLIANDA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'UPLIANDA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'UPLIANDA_CABIN_URL', 'https://withcabin.com/?utm_campaign=wp_widget&utm_medium=web&utm_source=sw' );
@@ -480,6 +480,17 @@ function uplianda_admin_styles( $hook ) {
 		$asset_file['version']
 	);
 
+	if ( $settings_hook === $hook ) {
+		$settings_script = UPLIANDA_PLUGIN_DIR . 'assets/admin-settings.js';
+		wp_enqueue_script(
+			'uplianda-admin-settings',
+			UPLIANDA_PLUGIN_URL . 'assets/admin-settings.js',
+			array(),
+			file_exists( $settings_script ) ? filemtime( $settings_script ) : UPLIANDA_VERSION,
+			true
+		);
+	}
+
 	if ( 'index.php' === $hook ) {
 		$view_asset_file = UPLIANDA_PLUGIN_DIR . 'assets/view.asset.php';
 		$view_asset      = file_exists( $view_asset_file ) ? include $view_asset_file : array( 'version' => UPLIANDA_VERSION );
@@ -538,29 +549,36 @@ function uplianda_settings_init() {
 	);
 
 	add_settings_section(
-		'uplianda_defaults_section',
-		__( 'Display Defaults', 'uplink-analytics-dashboard-for-cabin' ),
-		'uplianda_defaults_section_callback',
+		'uplianda_chart_defaults_section',
+		__( 'Chart defaults', 'uplink-analytics-dashboard-for-cabin' ),
+		'uplianda_chart_defaults_section_callback',
 		'uplianda'
 	);
 
 	add_settings_section(
 		'uplianda_private_dashboard_section',
-		__( 'Cabin Dashboard', 'uplink-analytics-dashboard-for-cabin' ),
+		__( 'Cabin dashboard', 'uplink-analytics-dashboard-for-cabin' ),
 		'uplianda_private_section_callback',
 		'uplianda'
 	);
 
 	add_settings_section(
-		'uplianda_modules_section',
-		__( 'Dashboard Report Modules', 'uplink-analytics-dashboard-for-cabin' ),
-		'uplianda_modules_section_callback',
+		'uplianda_popular_content_section',
+		__( 'Popular Content defaults', 'uplink-analytics-dashboard-for-cabin' ),
+		'uplianda_popular_content_section_callback',
+		'uplianda'
+	);
+
+	add_settings_section(
+		'uplianda_widgets_section',
+		__( 'WordPress dashboard widgets', 'uplink-analytics-dashboard-for-cabin' ),
+		'uplianda_widgets_section_callback',
 		'uplianda'
 	);
 
 	add_settings_field(
 		'uplianda_api_key',
-		__( 'API Key', 'uplink-analytics-dashboard-for-cabin' ),
+		__( 'API key', 'uplink-analytics-dashboard-for-cabin' ),
 		'uplianda_api_key_render',
 		'uplianda',
 		'uplianda_connection_section',
@@ -569,7 +587,7 @@ function uplianda_settings_init() {
 
 	add_settings_field(
 		'uplianda_domain',
-		__( 'Default Domain', 'uplink-analytics-dashboard-for-cabin' ),
+		__( 'Default domain', 'uplink-analytics-dashboard-for-cabin' ),
 		'uplianda_domain_render',
 		'uplianda',
 		'uplianda_connection_section',
@@ -578,60 +596,60 @@ function uplianda_settings_init() {
 
 	add_settings_field(
 		'uplianda_chart_type',
-		__( 'Default Chart Type', 'uplink-analytics-dashboard-for-cabin' ),
+		__( 'Default chart type', 'uplink-analytics-dashboard-for-cabin' ),
 		'uplianda_chart_type_render',
 		'uplianda',
-		'uplianda_defaults_section',
+		'uplianda_chart_defaults_section',
 		array( 'label_for' => 'uplianda_chart_type' )
 	);
 
 	add_settings_field(
 		'uplianda_date_range',
-		__( 'Default Date Range', 'uplink-analytics-dashboard-for-cabin' ),
+		__( 'Default reporting period', 'uplink-analytics-dashboard-for-cabin' ),
 		'uplianda_date_range_render',
 		'uplianda',
-		'uplianda_defaults_section',
+		'uplianda_chart_defaults_section',
 		array( 'label_for' => 'uplianda_date_range' )
 	);
 
 	add_settings_field(
 		'uplianda_url',
-		__( 'Default Dashboard URL', 'uplink-analytics-dashboard-for-cabin' ),
+		__( 'Cabin link URL', 'uplink-analytics-dashboard-for-cabin' ),
 		'uplianda_url_render',
 		'uplianda',
-		'uplianda_defaults_section',
+		'uplianda_private_dashboard_section',
 		array( 'label_for' => 'uplianda_url' )
 	);
 
 	add_settings_field(
 		'uplianda_popular_content_title',
-		__( 'Popular Content Title', 'uplink-analytics-dashboard-for-cabin' ),
+		__( 'Default title', 'uplink-analytics-dashboard-for-cabin' ),
 		'uplianda_popular_content_title_render',
 		'uplianda',
-		'uplianda_defaults_section',
+		'uplianda_popular_content_section',
 		array( 'label_for' => 'uplianda_popular_content_title' )
 	);
 
 	add_settings_field(
 		'uplianda_popular_content_date_range',
-		__( 'Popular Content Default Date Range', 'uplink-analytics-dashboard-for-cabin' ),
+		__( 'Default reporting period', 'uplink-analytics-dashboard-for-cabin' ),
 		'uplianda_popular_content_date_range_render',
 		'uplianda',
-		'uplianda_defaults_section',
+		'uplianda_popular_content_section',
 		array( 'label_for' => 'uplianda_popular_content_date_range' )
 	);
 
 	add_settings_field(
 		'uplianda_dashboard_widgets_enabled',
-		__( 'Enable WP dashboard widgets', 'uplink-analytics-dashboard-for-cabin' ),
+		__( 'Enable WordPress dashboard widgets', 'uplink-analytics-dashboard-for-cabin' ),
 		'uplianda_dashboard_widgets_enabled_render',
 		'uplianda',
-		'uplianda_private_dashboard_section'
+		'uplianda_widgets_section'
 	);
 
 	add_settings_field(
 		'uplianda_access_roles',
-		__( 'Dashboard Access', 'uplink-analytics-dashboard-for-cabin' ),
+		__( 'Dashboard access', 'uplink-analytics-dashboard-for-cabin' ),
 		'uplianda_access_roles_render',
 		'uplianda',
 		'uplianda_private_dashboard_section'
@@ -639,10 +657,13 @@ function uplianda_settings_init() {
 
 	add_settings_field(
 		'uplianda_modules',
-		__( 'Visible Modules', 'uplink-analytics-dashboard-for-cabin' ),
+		__( 'Visible widget modules', 'uplink-analytics-dashboard-for-cabin' ),
 		'uplianda_modules_render',
 		'uplianda',
-		'uplianda_modules_section'
+		'uplianda_widgets_section',
+		array(
+			'class' => empty( uplianda_get_options()['dashboard_widgets_enabled'] ) ? 'uplianda-widget-only-setting is-hidden' : 'uplianda-widget-only-setting',
+		)
 	);
 }
 add_action( 'admin_init', 'uplianda_settings_init' );
@@ -727,7 +748,7 @@ function uplianda_api_key_render() {
 				<circle cx="12" cy="12" r="10"/>
 				<path d="M12 16v-4M12 8h.01"/>
 			</svg>
-			<?php esc_html_e( 'Enter your Cabin Analytics API key from withcabin.com', 'uplink-analytics-dashboard-for-cabin' ); ?>
+			<?php esc_html_e( 'Create a read-only API key under Settings → API keys in Cabin. The key must have access to the selected domain.', 'uplink-analytics-dashboard-for-cabin' ); ?>
 		</p>
 	</div>
 	<?php
@@ -747,7 +768,7 @@ function uplianda_domain_render() {
 				<circle cx="12" cy="12" r="10"/>
 				<path d="M12 16v-4M12 8h.01"/>
 			</svg>
-			<?php esc_html_e( 'Your default domain to track (without https://)', 'uplink-analytics-dashboard-for-cabin' ); ?>
+			<?php esc_html_e( 'Enter the domain exactly as it appears in Cabin, without a protocol or path.', 'uplink-analytics-dashboard-for-cabin' ); ?>
 		</p>
 	</div>
 	<?php
@@ -762,9 +783,10 @@ function uplianda_chart_type_render() {
 	?>
 	<div class="uplianda-field-wrapper">
 		<select id="uplianda_chart_type" name="uplianda_options[chart_type]" class="uplianda-select">
-			<option value="bar" <?php selected( $chart_type, 'bar' ); ?>><?php esc_html_e( 'Stacked Bar Chart', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
-			<option value="line" <?php selected( $chart_type, 'line' ); ?>><?php esc_html_e( 'Line Chart', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
+			<option value="bar" <?php selected( $chart_type, 'bar' ); ?>><?php esc_html_e( 'Stacked bar chart', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
+			<option value="line" <?php selected( $chart_type, 'line' ); ?>><?php esc_html_e( 'Line chart', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
 		</select>
+		<p class="uplianda-description"><?php esc_html_e( 'Initial chart shown by the Site Traffic block, [uplianda] shortcode, and Analytics dashboard widget.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 	</div>
 	<?php
 }
@@ -778,11 +800,12 @@ function uplianda_date_range_render() {
 	?>
 	<div class="uplianda-field-wrapper">
 		<select id="uplianda_date_range" name="uplianda_options[date_range]" class="uplianda-select">
-			<option value="7" <?php selected( $date_range, '7' ); ?>><?php esc_html_e( 'Last 7 Days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
-			<option value="14" <?php selected( $date_range, '14' ); ?>><?php esc_html_e( 'Last 14 Days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
-			<option value="30" <?php selected( $date_range, '30' ); ?>><?php esc_html_e( 'Last 30 Days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
-			<option value="90" <?php selected( $date_range, '90' ); ?>><?php esc_html_e( 'Last 90 Days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
+			<option value="7" <?php selected( $date_range, '7' ); ?>><?php esc_html_e( 'Last 7 days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
+			<option value="14" <?php selected( $date_range, '14' ); ?>><?php esc_html_e( 'Last 14 days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
+			<option value="30" <?php selected( $date_range, '30' ); ?>><?php esc_html_e( 'Last 30 days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
+			<option value="90" <?php selected( $date_range, '90' ); ?>><?php esc_html_e( 'Last 90 days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
 		</select>
+		<p class="uplianda-description"><?php esc_html_e( 'Initial period used by the Site Traffic block, [uplianda] shortcode, and Analytics dashboard widget.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 	</div>
 	<?php
 }
@@ -801,7 +824,7 @@ function uplianda_url_render() {
 				<circle cx="12" cy="12" r="10"/>
 				<path d="M12 16v-4M12 8h.01"/>
 			</svg>
-			<?php esc_html_e( 'Custom URL for the Cabin link. Leave empty to use the tracked Cabin website link.', 'uplink-analytics-dashboard-for-cabin' ); ?>
+			<?php esc_html_e( 'Used by the Cabin button in the plugin dashboard and by Cabin links in widgets and charts. Leave blank to open withcabin.com.', 'uplink-analytics-dashboard-for-cabin' ); ?>
 		</p>
 	</div>
 	<?php
@@ -821,18 +844,18 @@ function uplianda_popular_content_date_range_render() {
 	?>
 	<div class="uplianda-field-wrapper">
 		<select id="uplianda_popular_content_date_range" name="uplianda_options[popular_content_date_range]" class="uplianda-select">
-			<option value="1" <?php selected( $date_range, '1' ); ?>><?php esc_html_e( 'Last 1 Day', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
-			<option value="7" <?php selected( $date_range, '7' ); ?>><?php esc_html_e( 'Last 7 Days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
-			<option value="14" <?php selected( $date_range, '14' ); ?>><?php esc_html_e( 'Last 14 Days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
-			<option value="30" <?php selected( $date_range, '30' ); ?>><?php esc_html_e( 'Last 30 Days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
-			<option value="90" <?php selected( $date_range, '90' ); ?>><?php esc_html_e( 'Last 90 Days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
+			<option value="1" <?php selected( $date_range, '1' ); ?>><?php esc_html_e( 'Today', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
+			<option value="7" <?php selected( $date_range, '7' ); ?>><?php esc_html_e( 'Last 7 days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
+			<option value="14" <?php selected( $date_range, '14' ); ?>><?php esc_html_e( 'Last 14 days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
+			<option value="30" <?php selected( $date_range, '30' ); ?>><?php esc_html_e( 'Last 30 days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
+			<option value="90" <?php selected( $date_range, '90' ); ?>><?php esc_html_e( 'Last 90 days', 'uplink-analytics-dashboard-for-cabin' ); ?></option>
 		</select>
 		<p class="uplianda-description">
 			<svg class="uplianda-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
 				<circle cx="12" cy="12" r="10"/>
 				<path d="M12 16v-4M12 8h.01"/>
 			</svg>
-			<?php esc_html_e( 'Default range used by [uplianda_popular_content] and the Popular Content block when no range is provided.', 'uplink-analytics-dashboard-for-cabin' ); ?>
+			<?php esc_html_e( 'Used by the Popular Content block, [uplianda_popular_content] shortcode, and dashboard widget when they do not set their own period.', 'uplink-analytics-dashboard-for-cabin' ); ?>
 		</p>
 	</div>
 	<?php
@@ -845,7 +868,7 @@ function uplianda_popular_content_title_render() {
 	?>
 	<div class="uplianda-field-wrapper">
 		<input id="uplianda_popular_content_title" type="text" name="uplianda_options[popular_content_title]" value="<?php echo esc_attr( $title ); ?>" class="uplianda-input" />
-		<p class="uplianda-description"><?php esc_html_e( 'Used when the Popular Content block or shortcode does not provide its own title.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
+		<p class="uplianda-description"><?php esc_html_e( 'Used by the Popular Content block, shortcode, and dashboard widget when they do not provide a title.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 	</div>
 	<?php
 }
@@ -898,23 +921,46 @@ function uplianda_modules_render() {
 			</fieldset>
 		<?php endforeach; ?>
 	</div>
-	<p class="uplianda-description"><?php esc_html_e( 'These choices affect WordPress dashboard widgets only. Each block and shortcode can choose its own modules.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
+	<p class="uplianda-description"><?php esc_html_e( 'These choices affect the Sustainability, Demographics, and Sources widgets only. Blocks and shortcodes keep their own module choices.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 	<?php
 }
 
 /** Connection section description. */
 function uplianda_connection_section_callback() {
-	echo '<p class="uplianda-section-description">' . esc_html__( 'Connect the Cabin PRO API and choose the site whose aggregated analytics should be displayed.', 'uplink-analytics-dashboard-for-cabin' ) . '</p>';
+	echo '<p class="uplianda-section-description">' . esc_html__( 'Connect Cabin\'s read-only Analytics API and choose the domain used throughout the plugin. REST API access requires a Cabin Plus or Scale plan.', 'uplink-analytics-dashboard-for-cabin' ) . '</p>';
 }
 
-/** Display-defaults section description. */
-function uplianda_defaults_section_callback() {
-	echo '<p class="uplianda-section-description">' . esc_html__( 'Set the initial chart, reporting period, links, and Popular Content presentation.', 'uplink-analytics-dashboard-for-cabin' ) . '</p>';
+/** Chart-defaults section description. */
+function uplianda_chart_defaults_section_callback() {
+	echo '<p class="uplianda-section-description">' . esc_html__( 'Set the initial chart view for Site Traffic blocks, the [uplianda] shortcode, and the Analytics dashboard widget.', 'uplink-analytics-dashboard-for-cabin' ) . '</p>';
 }
 
-/** Dashboard-modules section description. */
-function uplianda_modules_section_callback() {
-	echo '<p class="uplianda-section-description">' . esc_html__( 'Choose which modules appear inside the three Cabin report widgets on the WordPress dashboard.', 'uplink-analytics-dashboard-for-cabin' ) . '</p>';
+/** Popular Content section description. */
+function uplianda_popular_content_section_callback() {
+	echo '<p class="uplianda-section-description">' . esc_html__( 'Set fallback content for Popular Content blocks, shortcodes, and the dashboard widget.', 'uplink-analytics-dashboard-for-cabin' ) . '</p>';
+}
+
+/** WordPress dashboard widgets section description. */
+function uplianda_widgets_section_callback() {
+	echo '<p class="uplianda-section-description">' . esc_html__( 'Add or remove the five Cabin widgets on the standard WordPress Dashboard.', 'uplink-analytics-dashboard-for-cabin' ) . '</p>';
+}
+
+/** Render one settings section using the shared Uplink admin card pattern. */
+function uplianda_render_settings_card( $section_id, $title, $description, $class = '' ) {
+	?>
+	<section class="uplianda-settings-card <?php echo esc_attr( $class ); ?>" aria-labelledby="<?php echo esc_attr( $section_id ); ?>-title">
+		<header class="uplianda-settings-card__header">
+			<span><?php esc_html_e( 'Settings', 'uplink-analytics-dashboard-for-cabin' ); ?></span>
+			<h2 id="<?php echo esc_attr( $section_id ); ?>-title"><?php echo esc_html( $title ); ?></h2>
+			<p><?php echo esc_html( $description ); ?></p>
+		</header>
+		<div class="uplianda-settings-card__body">
+			<table class="form-table" role="presentation">
+				<?php do_settings_fields( 'uplianda', $section_id ); ?>
+			</table>
+		</div>
+	</section>
+	<?php
 }
 
 /**
@@ -927,31 +973,55 @@ function uplianda_options_page() {
 	
 	settings_errors( 'uplianda_messages' );
 	?>
-	<div class="uplianda-admin-wrap">
+	<div class="wrap uplianda-admin-wrap">
+		<h1 class="screen-reader-text"><?php esc_html_e( 'Cabin Dashboard Settings', 'uplink-analytics-dashboard-for-cabin' ); ?></h1>
 		<div class="uplianda-admin-header">
 			<div class="uplianda-header-content">
-				<div class="uplianda-brand-lockup" aria-hidden="true">
-					<img class="uplianda-brand-lockup__uplink" src="<?php echo esc_url( UPLIANDA_PLUGIN_URL . 'assets/branding/uplink-mark.svg' ); ?>" alt="" width="50" height="40" />
-					<span></span>
-					<strong class="uplianda-brand-lockup__name"><?php esc_html_e( 'Analytics Dashboard for Cabin', 'uplink-analytics-dashboard-for-cabin' ); ?></strong>
+				<span class="uplianda-brand-lockup" aria-hidden="true">
+					<img src="<?php echo esc_url( UPLIANDA_PLUGIN_URL . 'assets/branding/chart-analysis.svg' ); ?>" alt="" width="78" height="78" />
+				</span>
+				<div>
+					<div class="uplianda-header-meta">
+						<span class="uplianda-header-eyebrow"><?php esc_html_e( 'Uplink.Press administration', 'uplink-analytics-dashboard-for-cabin' ); ?></span>
+						<span class="uplianda-header-version"><?php echo esc_html( sprintf( /* translators: %s: plugin version. */ __( 'Version %s', 'uplink-analytics-dashboard-for-cabin' ), UPLIANDA_VERSION ) ); ?></span>
+					</div>
+					<div class="uplianda-header-title" aria-hidden="true"><?php esc_html_e( 'Cabin Dashboard Settings', 'uplink-analytics-dashboard-for-cabin' ); ?></div>
+					<p><?php esc_html_e( 'Connect Cabin Analytics and set defaults for the plugin dashboard, blocks, shortcodes, and WordPress dashboard widgets.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 				</div>
-				<h1><?php esc_html_e( 'Cabin Dashboard Settings', 'uplink-analytics-dashboard-for-cabin' ); ?></h1>
 			</div>
-			<p class="uplianda-tagline"><?php esc_html_e( 'Configure charts, popular content, sustainability, demographics, and acquisition reports.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
-			<p class="uplianda-tagline"><?php esc_html_e( 'An independent UplinkPress integration for Cabin. Not affiliated with or endorsed by Cabin.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 		</div>
 
 		<div class="uplianda-admin-content">
 			<div class="uplianda-admin-main">
-				<div class="uplianda-capability-grid" role="group" aria-label="<?php esc_attr_e( 'Available Cabin reports', 'uplink-analytics-dashboard-for-cabin' ); ?>">
-					<div><strong><?php esc_html_e( 'Analytics', 'uplink-analytics-dashboard-for-cabin' ); ?></strong><span><?php esc_html_e( 'Traffic charts and trends', 'uplink-analytics-dashboard-for-cabin' ); ?></span></div>
-					<div><strong><?php esc_html_e( 'Popular Content', 'uplink-analytics-dashboard-for-cabin' ); ?></strong><span><?php esc_html_e( 'Views, visitors, and attention', 'uplink-analytics-dashboard-for-cabin' ); ?></span></div>
-					<div><strong><?php esc_html_e( 'Site Reports', 'uplink-analytics-dashboard-for-cabin' ); ?></strong><span><?php esc_html_e( 'Sustainability, demographics, and sources', 'uplink-analytics-dashboard-for-cabin' ); ?></span></div>
-				</div>
 				<form action="options.php" method="post" class="uplianda-form">
 					<?php
 					settings_fields( 'uplianda' );
-					do_settings_sections( 'uplianda' );
+					uplianda_render_settings_card(
+						'uplianda_connection_section',
+						__( 'Connection', 'uplink-analytics-dashboard-for-cabin' ),
+						__( 'Connect Cabin\'s read-only Analytics API and choose the domain used throughout the plugin. REST API access requires a Cabin Plus or Scale plan.', 'uplink-analytics-dashboard-for-cabin' )
+					);
+					uplianda_render_settings_card(
+						'uplianda_private_dashboard_section',
+						__( 'Cabin dashboard', 'uplink-analytics-dashboard-for-cabin' ),
+						__( 'Set the external Cabin link and choose who can open the analytics dashboard inside WordPress.', 'uplink-analytics-dashboard-for-cabin' )
+					);
+					uplianda_render_settings_card(
+						'uplianda_chart_defaults_section',
+						__( 'Chart defaults', 'uplink-analytics-dashboard-for-cabin' ),
+						__( 'These defaults apply to Site Traffic blocks, the [uplianda] shortcode, and the Analytics dashboard widget.', 'uplink-analytics-dashboard-for-cabin' )
+					);
+					uplianda_render_settings_card(
+						'uplianda_popular_content_section',
+						__( 'Popular Content defaults', 'uplink-analytics-dashboard-for-cabin' ),
+						__( 'Used when a Popular Content block, shortcode, or dashboard widget does not set its own value.', 'uplink-analytics-dashboard-for-cabin' )
+					);
+					uplianda_render_settings_card(
+						'uplianda_widgets_section',
+						__( 'WordPress dashboard widgets', 'uplink-analytics-dashboard-for-cabin' ),
+						__( 'Add or remove the five Cabin widgets on the standard WordPress Dashboard.', 'uplink-analytics-dashboard-for-cabin' ),
+						'uplianda-settings-card--widgets'
+					);
 					?>
 					<div class="uplianda-form-actions">
 						<?php submit_button( __( 'Save Settings', 'uplink-analytics-dashboard-for-cabin' ), 'primary', 'submit', false ); ?>
@@ -969,13 +1039,13 @@ function uplianda_options_page() {
 						<?php esc_html_e( 'Usage', 'uplink-analytics-dashboard-for-cabin' ); ?>
 					</h3>
 					<div class="uplianda-card-content">
-						<h4><?php esc_html_e( 'Cabin Dashboard', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
-						<p><?php esc_html_e( 'Open Cabin Dashboard for an API-powered analytics workspace with section navigation, reporting periods, and light or dark mode. Dashboard access is controlled by the role settings on this page.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
+						<h4><?php esc_html_e( 'Cabin dashboard', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
+						<p><?php esc_html_e( 'The Cabin Dashboard is always available to the roles selected on this page. It has section navigation, reporting periods, and light or dark mode.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 
-						<h4><?php esc_html_e( 'Dashboard Widgets', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
-						<p><?php esc_html_e( 'Analytics, Popular Content, Sustainability, Demographics, and Sources appear after configuration. Disable WP dashboard widgets on this page to remove all five widgets from the WordPress Dashboard and its Screen Options.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
+						<h4><?php esc_html_e( 'WordPress dashboard widgets', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
+						<p><?php esc_html_e( 'When enabled, the standard WordPress Dashboard shows Analytics, Popular Content, Sustainability, Demographics, and Sources widgets. The module choices affect the last three widgets only.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 						
-						<h4><?php esc_html_e( 'Block Editor', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
+						<h4><?php esc_html_e( 'Block editor', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
 						<p><?php esc_html_e( 'Search for “Cabin” to find six blocks. Report blocks include module toggles in the block sidebar, and the Country Traffic Map has its own reporting period.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 						
 						<h4><?php esc_html_e( 'Charts', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
@@ -984,7 +1054,7 @@ function uplianda_options_page() {
 						<h4><?php esc_html_e( 'Popular Content', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
 						<code class="uplianda-code">[uplianda_popular_content]</code>
 
-						<h4><?php esc_html_e( 'Site Reports', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
+						<h4><?php esc_html_e( 'Site reports', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
 						<code class="uplianda-code">[uplianda_sustainability]</code>
 						<code class="uplianda-code">[uplianda_demographics]</code>
 						<code class="uplianda-code">[uplianda_sources]</code>

@@ -5,7 +5,7 @@ Tags:              analytics, cabin, dashboard, charts, privacy
 Requires at least: 6.9
 Requires PHP:      8.3
 Tested up to:      7.1
-Stable tag:        2.0.2
+Stable tag:        2.1.0
 License:           GPL-2.0-or-later
 License URI:       https://spdx.org/licenses/GPL-2.0-or-later.html
 
@@ -28,6 +28,7 @@ Cabin API keys are currently available on the Cabin Plus and Scale plans.
 * AI agent, energy, carbon, and scroll-depth reports when Cabin returns that data for the connected plan
 * Reporting periods for today, 7, 14, 30, or 90 days in the admin dashboard
 * Search, pagination, View all controls, chart tooltips, country flags, and an accessible world map
+* Page-level traffic, attention, energy, and event details opened directly from Top Pages
 * Role-based dashboard access, with administrator access retained
 * Five optional WordPress dashboard widgets for Analytics, Popular Content, Sustainability, Demographics, and Sources
 * Standalone Uplink Popular Content for Cabin dashboard widget with title, domain, controls, and summary/detail metrics
@@ -228,6 +229,13 @@ This plugin uses the Cabin Analytics API v1. Visit https://withcabin.com for cur
 5. Redesigned settings page with clear sections for the Cabin connection, dashboard access, content defaults, and optional WordPress dashboard widgets.
 
 == Changelog ==
+
+= 2.1.0 =
+* Added a page-level analytics dialog to Top Pages with traffic, attention, scroll depth, energy, and page-specific events from the available Cabin API data.
+* Made each Top Pages data row open its page details while retaining the page-name button for keyboard and screen-reader access.
+* Added seven-item pagination for page-specific Events and kept event counts sorted in descending order.
+* Unified the page overview into a compact aligned panel with consistent typography, dividers, responsive stacking, and concise unavailable values.
+* Standardized ranked-list measurement bars and restored consistent spacing between Top Pages and Referrals.
 
 = 2.0.2 =
 * Sorted Events by count in descending order, with event names used only to break ties.

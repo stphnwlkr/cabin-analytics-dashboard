@@ -330,6 +330,209 @@
 		} );
 	} );
 
+	const pageModal = dashboard.querySelector( '[data-uplianda-page-modal]' );
+	const pageDataNode = dashboard.querySelector( '[data-uplianda-page-details]' );
+	if ( pageModal && pageDataNode ) {
+		let pageDetails = {};
+		try {
+			pageDetails = JSON.parse( pageDataNode.textContent || '{}' );
+		} catch ( error ) {
+			pageDetails = {};
+		}
+
+		const numberFormat = new Intl.NumberFormat();
+		const decimalFormat = new Intl.NumberFormat( undefined, { maximumFractionDigits: 1 } );
+		const preciseFormat = new Intl.NumberFormat( undefined, { maximumFractionDigits: 4 } );
+		const path = pageModal.querySelector( '[data-uplianda-page-path]' );
+		const title = pageModal.querySelector( '[data-uplianda-page-title]' );
+		const openLink = pageModal.querySelector( '[data-uplianda-page-open]' );
+		const closeButton = pageModal.querySelector( '[data-uplianda-page-close]' );
+		const visitors = pageModal.querySelector( '[data-uplianda-page-visitors]' );
+		const visitorShare = pageModal.querySelector( '[data-uplianda-page-visitor-share]' );
+		const views = pageModal.querySelector( '[data-uplianda-page-views]' );
+		const viewShare = pageModal.querySelector( '[data-uplianda-page-view-share]' );
+		const duration = pageModal.querySelector( '[data-uplianda-page-duration]' );
+		const depth = pageModal.querySelector( '[data-uplianda-page-depth]' );
+		const depthCard = pageModal.querySelector( '[data-uplianda-page-depth-card]' );
+		const depthStrip = pageModal.querySelector( '[data-uplianda-page-depth-strip]' );
+		const depthEmpty = pageModal.querySelector( '[data-uplianda-page-depth-empty]' );
+		const bytes = pageModal.querySelector( '[data-uplianda-page-bytes]' );
+		const co2 = pageModal.querySelector( '[data-uplianda-page-co2]' );
+		const energyCard = pageModal.querySelector( '[data-uplianda-page-energy-card]' );
+		const eventsList = pageModal.querySelector( '[data-uplianda-page-events]' );
+		const eventsEmpty = pageModal.querySelector( '[data-uplianda-page-events-empty]' );
+		const eventsPagination = pageModal.querySelector( '[data-uplianda-page-events-pagination]' );
+		const eventsPrevious = pageModal.querySelector( '[data-uplianda-page-events-previous]' );
+		const eventsNext = pageModal.querySelector( '[data-uplianda-page-events-next]' );
+		const eventsPageOutput = pageModal.querySelector( '[data-uplianda-page-events-page]' );
+		const eventsPageSize = 7;
+		let currentEventRows = [];
+		let currentEventPage = 1;
+		let opener = null;
+
+		function percentage( value ) {
+			const numeric = Number( value ) || 0;
+			return decimalFormat.format( numeric <= 1 ? numeric * 100 : numeric ) + '%';
+		}
+
+		function formatDuration( value ) {
+			const seconds = Math.max( 0, Math.round( Number( value ) || 0 ) );
+			if ( seconds >= 3600 ) {
+				return Math.floor( seconds / 3600 ) + 'h ' + Math.floor( ( seconds % 3600 ) / 60 ) + 'm';
+			}
+			if ( seconds >= 60 ) {
+				return Math.floor( seconds / 60 ) + 'm ' + ( seconds % 60 ) + 's';
+			}
+			return seconds + 's';
+		}
+
+		function formatBytes( value ) {
+			return decimalFormat.format( Math.max( 0, Number( value ) || 0 ) ) + ' MB';
+		}
+
+		function renderDepth( scrollDepth ) {
+			const rows = scrollDepth && Array.isArray( scrollDepth.reached_at_least ) ? scrollDepth.reached_at_least : [];
+			const average = Number( scrollDepth && scrollDepth.average_percentage ) || 0;
+			depth.textContent = decimalFormat.format( average ) + '%';
+			depthStrip.replaceChildren();
+			depthCard.hidden = ! rows.length;
+			depthEmpty.hidden = rows.length > 0;
+
+			rows.filter( function ( row ) { return Number( row.percent ) > 0; } ).forEach( function ( row ) {
+				const segment = document.createElement( 'button' );
+				const reached = Number( row.visitors_percentage ) || 0;
+				const labelText = decimalFormat.format( reached ) + '% got this far';
+				segment.type = 'button';
+				segment.style.setProperty( '--uplianda-page-depth-reach', Math.max( 0.16, reached / 100 ) );
+				segment.dataset.label = labelText;
+				segment.setAttribute( 'aria-label', Number( row.percent ) + '% page depth: ' + labelText );
+				depthStrip.appendChild( segment );
+			} );
+			depthStrip.style.setProperty( '--uplianda-page-depth-average', Math.max( 0, Math.min( 100, average ) ) + '%' );
+		}
+
+		function drawEvents() {
+			const pageCount = Math.max( 1, Math.ceil( currentEventRows.length / eventsPageSize ) );
+			currentEventPage = Math.min( currentEventPage, pageCount );
+			const start = ( currentEventPage - 1 ) * eventsPageSize;
+			const rows = currentEventRows.slice( start, start + eventsPageSize );
+			const maximum = Math.max.apply( null, currentEventRows.map( function ( event ) { return Number( event.count ) || 0; } ).concat( [ 1 ] ) );
+			eventsList.replaceChildren();
+			eventsEmpty.hidden = currentEventRows.length > 0;
+			eventsPagination.hidden = currentEventRows.length <= eventsPageSize;
+			eventsPrevious.disabled = currentEventPage <= 1;
+			eventsNext.disabled = currentEventPage >= pageCount;
+			eventsPageOutput.textContent = currentEventPage + ' / ' + pageCount;
+
+			rows.forEach( function ( event ) {
+				const item = document.createElement( 'li' );
+				const row = document.createElement( 'div' );
+				const name = document.createElement( 'span' );
+				const count = document.createElement( 'strong' );
+				const track = document.createElement( 'span' );
+				const measure = document.createElement( 'i' );
+				name.textContent = event.name || '';
+				count.textContent = numberFormat.format( Number( event.count ) || 0 );
+				row.append( name, count );
+				track.className = 'uplianda-dash-page-modal__event-track';
+				measure.style.width = Math.max( 1, ( ( Number( event.count ) || 0 ) / maximum ) * 100 ) + '%';
+				track.appendChild( measure );
+				item.append( row, track );
+				eventsList.appendChild( item );
+			} );
+		}
+
+		function renderEvents( eventRows ) {
+			currentEventRows = Array.isArray( eventRows ) ? eventRows : [];
+			currentEventPage = 1;
+			drawEvents();
+		}
+
+		function populatePageModal( detail ) {
+			const pageViews = Number( detail.page_views ) || 0;
+			const uniqueVisitors = Number( detail.unique_visitors ) || 0;
+			const hasEnergy = Number( detail.total_bytes ) > 0 || Number( detail.co2_grams ) > 0;
+			path.textContent = detail.path || '/';
+			title.textContent = detail.title || detail.path || '/';
+			openLink.href = detail.url || '#';
+			visitors.textContent = numberFormat.format( uniqueVisitors );
+			visitorShare.textContent = pageViews ? percentage( uniqueVisitors / pageViews ) + ' of pageviews' : '';
+			views.textContent = numberFormat.format( pageViews );
+			viewShare.textContent = Number( detail.page_views_percentage ) > 0 ? percentage( detail.page_views_percentage ) + ' of all pageviews' : '';
+			duration.textContent = formatDuration( detail.average_duration_seconds );
+			bytes.textContent = formatBytes( detail.total_bytes );
+			co2.textContent = Number( detail.co2_grams ) > 0 ? preciseFormat.format( Number( detail.co2_grams ) ) + ' g' : 'N/A';
+			energyCard.hidden = ! hasEnergy;
+			renderDepth( detail.scroll_depth || {} );
+			renderEvents( detail.events || [] );
+		}
+
+		dashboard.querySelectorAll( '[data-uplianda-page-open-modal]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				const detail = pageDetails[ button.dataset.upliandaPageOpenModal ];
+				if ( ! detail ) {
+					return;
+				}
+				opener = button;
+				populatePageModal( detail );
+				dashboard.classList.add( 'has-page-modal' );
+				if ( 'function' === typeof pageModal.showModal ) {
+					pageModal.showModal();
+				} else {
+					pageModal.setAttribute( 'open', '' );
+				}
+				closeButton.focus();
+			} );
+		} );
+
+		dashboard.querySelectorAll( '.uplianda-dash-pages__row' ).forEach( function ( row ) {
+			const button = row.querySelector( '[data-uplianda-page-open-modal]' );
+			if ( ! button ) {
+				return;
+			}
+			row.addEventListener( 'click', function ( event ) {
+				if ( event.target.closest( 'a, button, input, select, textarea' ) || window.getSelection().toString() ) {
+					return;
+				}
+				button.click();
+			} );
+		} );
+
+		eventsPrevious.addEventListener( 'click', function () {
+			currentEventPage = Math.max( 1, currentEventPage - 1 );
+			drawEvents();
+		} );
+
+		eventsNext.addEventListener( 'click', function () {
+			currentEventPage += 1;
+			drawEvents();
+		} );
+
+		function closePageModal() {
+			if ( 'function' === typeof pageModal.close ) {
+				pageModal.close();
+			} else {
+				pageModal.removeAttribute( 'open' );
+			}
+		}
+
+		closeButton.addEventListener( 'click', closePageModal );
+		pageModal.addEventListener( 'click', function ( event ) {
+			if ( event.target === pageModal ) {
+				closePageModal();
+			}
+		} );
+		pageModal.addEventListener( 'close', function () {
+			dashboard.classList.remove( 'has-page-modal' );
+			if ( opener ) {
+				opener.focus();
+			}
+		} );
+		pageModal.addEventListener( 'cancel', function () {
+			dashboard.classList.remove( 'has-page-modal' );
+		} );
+	}
+
 	const railLinks = Array.from( dashboard.querySelectorAll( '.uplianda-dash-rail a[href^="#"]' ) );
 	const sections = railLinks.map( function ( link ) {
 		return document.querySelector( link.getAttribute( 'href' ) );

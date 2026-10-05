@@ -341,6 +341,111 @@ function uplianda_dashboard_scroll_depth_stat( $scroll_depth ) {
 	<?php
 }
 
+/** Build the page-level data used by the Top Pages preview dialog. */
+function uplianda_dashboard_page_details( $pages, $events, $base ) {
+	$details = array();
+
+	foreach ( $pages as $index => $page ) {
+		$path        = uplianda_normalize_path( (string) ( $page['path'] ?? '/' ) );
+		$post        = uplianda_resolve_path_to_post( $path );
+		$page_events = array();
+
+		foreach ( $events as $event ) {
+			foreach ( is_array( $event['pages'] ?? null ) ? $event['pages'] : array() as $event_page ) {
+				if ( $path !== uplianda_normalize_path( (string) ( $event_page['path'] ?? '' ) ) ) {
+					continue;
+				}
+				$page_events[] = array(
+					'name'       => (string) ( $event['name'] ?? __( 'Unnamed event', 'uplink-analytics-dashboard-for-cabin' ) ),
+					'count'      => (int) ( $event_page['count'] ?? 0 ),
+					'percentage' => (float) ( $event_page['percentage'] ?? 0 ),
+				);
+				break;
+			}
+		}
+
+		usort(
+			$page_events,
+			static function ( $left, $right ) {
+				$count_order = $right['count'] <=> $left['count'];
+				return 0 !== $count_order ? $count_order : strnatcasecmp( $left['name'], $right['name'] );
+			}
+		);
+
+		$details[ (string) $index ] = array(
+			'path'                     => $path,
+			'title'                    => $post ? get_the_title( $post ) : uplianda_get_path_title( $path ),
+			'url'                      => esc_url_raw( trailingslashit( $base ) . ltrim( $path, '/' ) ),
+			'page_views'               => (int) ( $page['page_views'] ?? 0 ),
+			'unique_visitors'          => (int) ( $page['unique_visitors'] ?? 0 ),
+			'page_views_percentage'    => (float) ( $page['page_views_percentage'] ?? 0 ),
+			'average_duration_seconds' => (float) ( $page['average_duration_seconds'] ?? 0 ),
+			'total_bytes'              => (float) ( $page['total_bytes'] ?? 0 ),
+			'co2_grams'                => (float) ( $page['co2_grams'] ?? 0 ),
+			'scroll_depth'             => is_array( $page['scroll_depth'] ?? null ) ? $page['scroll_depth'] : array(),
+			'events'                   => $page_events,
+		);
+	}
+
+	return $details;
+}
+
+/** Render the reusable page-level preview dialog. */
+function uplianda_dashboard_page_modal( $details ) {
+	?>
+	<script type="application/json" data-uplianda-page-details><?php echo wp_json_encode( $details, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON is safely hex encoded. ?></script>
+	<dialog class="uplianda-dash-page-modal" data-uplianda-page-modal aria-labelledby="uplianda-page-modal-title">
+		<div class="uplianda-dash-page-modal__frame">
+			<header class="uplianda-dash-page-modal__header">
+				<div>
+					<h2 id="uplianda-page-modal-title" data-uplianda-page-path></h2>
+					<p><span data-uplianda-page-title></span> <span aria-hidden="true">&middot;</span> <a data-uplianda-page-open href="#" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'open', 'uplink-analytics-dashboard-for-cabin' ); ?><span class="screen-reader-text"> <?php esc_html_e( '(opens in a new tab)', 'uplink-analytics-dashboard-for-cabin' ); ?></span><svg aria-hidden="true" viewBox="0 0 24 24" width="15" height="15"><path d="M14 5h5v5M19 5l-9 9M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg></a></p>
+				</div>
+				<button class="uplianda-dash-page-modal__close" type="button" data-uplianda-page-close aria-label="<?php esc_attr_e( 'Close page details', 'uplink-analytics-dashboard-for-cabin' ); ?>"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"/></svg></button>
+			</header>
+			<div class="uplianda-dash-page-modal__body">
+				<section aria-labelledby="uplianda-page-overview-title">
+					<h3 id="uplianda-page-overview-title"><?php esc_html_e( 'Page overview', 'uplink-analytics-dashboard-for-cabin' ); ?></h3>
+					<div class="uplianda-dash-page-modal__overview">
+						<article class="uplianda-dash-page-modal__card">
+							<h4><?php esc_html_e( 'Traffic', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
+							<div class="uplianda-dash-page-modal__metrics">
+								<div class="uplianda-dash-page-modal__metric"><span><?php esc_html_e( 'Unique Visitors', 'uplink-analytics-dashboard-for-cabin' ); ?></span><strong data-uplianda-page-visitors></strong><small data-uplianda-page-visitor-share></small></div>
+								<div class="uplianda-dash-page-modal__metric"><span><?php esc_html_e( 'Pageviews', 'uplink-analytics-dashboard-for-cabin' ); ?></span><strong data-uplianda-page-views></strong><small data-uplianda-page-view-share></small></div>
+							</div>
+							<p class="uplianda-dash-page-modal__note"><?php esc_html_e( 'Page totals for the selected period. Cabin does not currently provide a page-specific daily series.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
+						</article>
+						<article class="uplianda-dash-page-modal__card uplianda-dash-page-modal__attention">
+							<h4><?php esc_html_e( 'Attention', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
+							<div class="uplianda-dash-page-modal__attention-layout">
+								<div class="uplianda-dash-page-modal__metric"><span><?php esc_html_e( 'Average time spent', 'uplink-analytics-dashboard-for-cabin' ); ?></span><strong data-uplianda-page-duration></strong><small><?php esc_html_e( 'per pageview', 'uplink-analytics-dashboard-for-cabin' ); ?></small></div>
+								<div class="uplianda-dash-page-modal__depth" data-uplianda-page-depth-card><div><span><?php esc_html_e( 'Scroll Depth', 'uplink-analytics-dashboard-for-cabin' ); ?></span><strong data-uplianda-page-depth></strong><small><?php esc_html_e( 'Average', 'uplink-analytics-dashboard-for-cabin' ); ?></small></div><div class="uplianda-dash-page-modal__depth-strip" data-uplianda-page-depth-strip aria-hidden="true"></div></div>
+							</div>
+							<p class="uplianda-dash-page-modal__empty" data-uplianda-page-depth-empty hidden><?php esc_html_e( 'Cabin did not return scroll-depth measurements for this page.', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
+						</article>
+						<article class="uplianda-dash-page-modal__card" data-uplianda-page-energy-card>
+							<h4><?php esc_html_e( 'Energy', 'uplink-analytics-dashboard-for-cabin' ); ?></h4>
+							<div class="uplianda-dash-page-modal__metrics"><div class="uplianda-dash-page-modal__metric"><span><?php esc_html_e( 'Page Weight', 'uplink-analytics-dashboard-for-cabin' ); ?></span><strong data-uplianda-page-bytes></strong></div><div class="uplianda-dash-page-modal__metric"><span><?php esc_html_e( 'CO₂', 'uplink-analytics-dashboard-for-cabin' ); ?></span><strong data-uplianda-page-co2></strong></div></div>
+						</article>
+					</div>
+				</section>
+				<section class="uplianda-dash-page-modal__events-section" aria-labelledby="uplianda-page-events-title">
+					<div class="uplianda-dash-page-modal__section-heading">
+						<h3 id="uplianda-page-events-title"><?php esc_html_e( 'Events', 'uplink-analytics-dashboard-for-cabin' ); ?></h3>
+						<div class="uplianda-dash-list-pagination" data-uplianda-page-events-pagination role="group" aria-label="<?php esc_attr_e( 'Page events pagination', 'uplink-analytics-dashboard-for-cabin' ); ?>" hidden>
+							<button type="button" aria-label="<?php esc_attr_e( 'Previous events page', 'uplink-analytics-dashboard-for-cabin' ); ?>" data-uplianda-page-events-previous disabled><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="18" height="18"><path d="m15 18-6-6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg></button>
+							<output aria-live="polite" data-uplianda-page-events-page>1 / 1</output>
+							<button type="button" aria-label="<?php esc_attr_e( 'Next events page', 'uplink-analytics-dashboard-for-cabin' ); ?>" data-uplianda-page-events-next disabled><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="18" height="18"><path d="m9 18 6-6-6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg></button>
+						</div>
+					</div>
+					<div class="uplianda-dash-card uplianda-dash-page-modal__events"><div class="uplianda-dash-ranked__header"><span><?php esc_html_e( 'Event', 'uplink-analytics-dashboard-for-cabin' ); ?></span><span><?php esc_html_e( 'Count', 'uplink-analytics-dashboard-for-cabin' ); ?></span></div><ol data-uplianda-page-events></ol><p class="uplianda-dash-page-modal__empty" data-uplianda-page-events-empty hidden><?php esc_html_e( 'No events were returned for this page and reporting period.', 'uplink-analytics-dashboard-for-cabin' ); ?></p></div>
+				</section>
+			</div>
+		</div>
+	</dialog>
+	<?php
+}
+
 /** Render the dashboard country data list beneath the map. */
 function uplianda_dashboard_country_list( $items ) {
 	if ( empty( $items ) ) {
@@ -545,6 +650,7 @@ function uplianda_render_private_dashboard() {
 	$pages        = is_array( $data['pages'] ?? null ) ? array_values( $data['pages'] ) : array();
 	$pages_id     = wp_unique_id( 'uplianda-dashboard-pages-' );
 	$pages_label  = __( 'Top Pages', 'uplink-analytics-dashboard-for-cabin' );
+	$page_details = uplianda_dashboard_page_details( $pages, is_array( $data['events'] ?? null ) ? $data['events'] : array(), $base );
 	$page_views_total = max( 1, array_sum( array_map( static fn( $page ) => (float) ( $page['page_views'] ?? 0 ), $pages ) ) );
 	uplianda_dashboard_section_open( 'pages', $pages_label, __( 'Pages ranked by visits and attention.', 'uplink-analytics-dashboard-for-cabin' ), $range );
 	?>
@@ -552,18 +658,19 @@ function uplianda_render_private_dashboard() {
 		<?php uplianda_dashboard_list_controls( $pages_id, $pages_label, count( $pages ) ); ?>
 		<div class="uplianda-dash-table-wrap">
 			<table id="<?php echo esc_attr( $pages_id ); ?>"><thead><tr><th scope="col"><?php esc_html_e( 'Page', 'uplink-analytics-dashboard-for-cabin' ); ?></th><th scope="col"><?php esc_html_e( 'Views', 'uplink-analytics-dashboard-for-cabin' ); ?></th><th scope="col"><?php esc_html_e( 'Visitors', 'uplink-analytics-dashboard-for-cabin' ); ?></th><th scope="col"><?php esc_html_e( 'Attention', 'uplink-analytics-dashboard-for-cabin' ); ?></th></tr></thead><tbody>
-			<?php foreach ( $pages as $page ) :
+			<?php foreach ( $pages as $page_index => $page ) :
 				$path       = (string) ( $page['path'] ?? '/' );
 				$page_views = (float) ( $page['page_views'] ?? 0 );
 				$share      = max( 1, ( $page_views / $page_views_total ) * 100 );
 				?>
-				<tr class="uplianda-dash-pages__row" data-uplianda-list-item><th scope="row"><a href="<?php echo esc_url( trailingslashit( $base ) . ltrim( $path, '/' ) ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $path ); ?><span class="screen-reader-text"> <?php esc_html_e( '(opens in a new tab)', 'uplink-analytics-dashboard-for-cabin' ); ?></span></a></th><td><?php echo esc_html( number_format_i18n( $page_views ) ); ?></td><td><?php echo esc_html( number_format_i18n( (float) ( $page['unique_visitors'] ?? 0 ) ) ); ?></td><td><?php echo esc_html( uplianda_dashboard_duration( $page['average_duration_seconds'] ?? 0 ) ); ?></td></tr>
+				<tr class="uplianda-dash-pages__row" data-uplianda-list-item><th scope="row"><button class="uplianda-dash-page-peek" type="button" data-uplianda-page-open-modal="<?php echo esc_attr( $page_index ); ?>"><?php echo esc_html( $path ); ?><span class="screen-reader-text"> <?php esc_html_e( 'View page details', 'uplink-analytics-dashboard-for-cabin' ); ?></span></button></th><td><?php echo esc_html( number_format_i18n( $page_views ) ); ?></td><td><?php echo esc_html( number_format_i18n( (float) ( $page['unique_visitors'] ?? 0 ) ) ); ?></td><td><?php echo esc_html( uplianda_dashboard_duration( $page['average_duration_seconds'] ?? 0 ) ); ?></td></tr>
 				<tr class="uplianda-dash-pages__measure" data-uplianda-list-measure aria-hidden="true"><td colspan="4"><span><i style="width:<?php echo esc_attr( $share ); ?>%"></i></span></td></tr>
 			<?php endforeach; ?>
 			</tbody></table>
 		</div>
 		<?php uplianda_dashboard_list_footer( $pages_id, count( $pages ) ); ?>
 	</div></section>
+	<?php uplianda_dashboard_page_modal( $page_details ); ?>
 
 	<?php
 	uplianda_dashboard_section_open( 'referrals', __( 'Referrals', 'uplink-analytics-dashboard-for-cabin' ), __( 'Where visitors came from', 'uplink-analytics-dashboard-for-cabin' ), $range );

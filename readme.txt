@@ -5,7 +5,7 @@ Tags:              analytics, cabin, dashboard, charts, privacy
 Requires at least: 6.9
 Requires PHP:      8.3
 Tested up to:      7.1
-Stable tag:        2.0.1
+Stable tag:        2.0.2
 License:           GPL-2.0-or-later
 License URI:       https://spdx.org/licenses/GPL-2.0-or-later.html
 
@@ -228,6 +228,11 @@ This plugin uses the Cabin Analytics API v1. Visit https://withcabin.com for cur
 5. Redesigned settings page with clear sections for the Cabin connection, dashboard access, content defaults, and optional WordPress dashboard widgets.
 
 == Changelog ==
+
+= 2.0.2 =
+* Sorted Events by count in descending order, with event names used only to break ties.
+* Moved Attention directly below Summary in the dashboard and section navigation.
+* Added an API-powered scroll-depth graph with cumulative reach values, an average marker, and compact hover and keyboard-focus labels.
 
 = 2.0.1 =
 * Refreshed the WordPress.org screenshots with the new Cabin Dashboard and settings experience.

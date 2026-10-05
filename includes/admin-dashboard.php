@@ -264,7 +264,19 @@ function uplianda_dashboard_list_footer( $list_id, $item_count ) {
 
 /** Render a ranked list with proportional bars. */
 function uplianda_dashboard_ranked_list( $rows, $label = '' ) {
-	$rows    = array_values( $rows );
+	$rows = array_values( $rows );
+	usort(
+		$rows,
+		static function ( $first, $second ) {
+			$value_order = (float) ( $second['value'] ?? 0 ) <=> (float) ( $first['value'] ?? 0 );
+			if ( 0 !== $value_order ) {
+				return $value_order;
+			}
+
+			return strnatcasecmp( (string) ( $first['label'] ?? '' ), (string) ( $second['label'] ?? '' ) );
+		}
+	);
+
 	$maximum = ! empty( $rows ) ? max( 1, (float) $rows[0]['value'] ) : 1;
 	if ( empty( $rows ) ) {
 		echo '<p class="uplianda-dash-empty">' . esc_html__( 'No data is available for this period.', 'uplink-analytics-dashboard-for-cabin' ) . '</p>';
@@ -281,6 +293,50 @@ function uplianda_dashboard_ranked_list( $rows, $label = '' ) {
 		<?php endforeach; ?>
 	</ol>
 	<?php uplianda_dashboard_list_footer( $list_id, count( $rows ) ); ?>
+	</div>
+	<?php
+}
+
+/** Render the site-wide scroll-depth metric and cumulative depth graph. */
+function uplianda_dashboard_scroll_depth_stat( $scroll_depth ) {
+	$average = (float) ( $scroll_depth['average_percentage'] ?? 0 );
+	$buckets = is_array( $scroll_depth['reached_at_least'] ?? null ) ? $scroll_depth['reached_at_least'] : array();
+	$buckets = array_values(
+		array_filter(
+			$buckets,
+			static fn( $row ) => is_array( $row ) && isset( $row['percent'], $row['visitors_percentage'] ) && (float) $row['percent'] > 0
+		)
+	);
+	usort( $buckets, static fn( $first, $second ) => (float) $first['percent'] <=> (float) $second['percent'] );
+	?>
+	<div class="uplianda-dash-stat uplianda-dash-stat--scroll-depth">
+		<div class="uplianda-dash-scroll-depth__metric">
+			<span><?php esc_html_e( 'Scroll Depth', 'uplink-analytics-dashboard-for-cabin' ); ?></span>
+			<strong><?php echo esc_html( number_format_i18n( $average, 0 ) . '%' ); ?></strong>
+			<small><?php esc_html_e( 'Average', 'uplink-analytics-dashboard-for-cabin' ); ?></small>
+		</div>
+		<?php if ( ! empty( $buckets ) ) : ?>
+		<div class="uplianda-dash-scroll-depth__visual">
+			<div class="uplianda-dash-scroll-depth__bar" style="--uplianda-scroll-average:<?php echo esc_attr( min( 100, max( 0, $average ) ) . '%' ); ?>">
+				<?php foreach ( $buckets as $bucket ) :
+					$depth = min( 100, max( 0, (float) $bucket['percent'] ) );
+					$reach = min( 100, max( 0, (float) $bucket['visitors_percentage'] ) );
+					$alpha = 0.18 + ( 0.82 * $reach / 100 );
+					$description = sprintf(
+						/* translators: 1: percentage of measured visits, 2: page depth percentage. */
+						__( '%1$s%% of measured visits reached at least %2$s%% of the page', 'uplink-analytics-dashboard-for-cabin' ),
+						number_format_i18n( $reach, 1 ),
+						number_format_i18n( $depth, 0 )
+					);
+					?>
+					<button type="button" class="uplianda-dash-scroll-depth__segment" style="--uplianda-scroll-reach:<?php echo esc_attr( number_format( $alpha, 3, '.', '' ) ); ?>" aria-label="<?php echo esc_attr( $description ); ?>">
+						<span class="uplianda-dash-scroll-depth__balloon" aria-hidden="true"><strong><?php echo esc_html( number_format_i18n( $reach, 1 ) . '%' ); ?></strong><small><?php esc_html_e( 'got this far', 'uplink-analytics-dashboard-for-cabin' ); ?></small></span>
+					</button>
+				<?php endforeach; ?>
+				<span class="uplianda-dash-scroll-depth__average" aria-hidden="true"></span>
+			</div>
+		</div>
+		<?php endif; ?>
 	</div>
 	<?php
 }
@@ -428,11 +484,12 @@ function uplianda_dashboard_open( $domain, $range, $data, $dashboard_url ) {
 	</div></header>
 	<div class="uplianda-dash-shell"><nav class="uplianda-dash-rail" aria-label="<?php esc_attr_e( 'Dashboard sections', 'uplink-analytics-dashboard-for-cabin' ); ?>"><p><?php esc_html_e( 'Reports', 'uplink-analytics-dashboard-for-cabin' ); ?></p>
 	<?php
-	$links = array( 'summary' => __( 'Summary', 'uplink-analytics-dashboard-for-cabin' ), 'pages' => __( 'Top Pages', 'uplink-analytics-dashboard-for-cabin' ), 'referrals' => __( 'Referrals', 'uplink-analytics-dashboard-for-cabin' ), 'sources' => __( 'Sources', 'uplink-analytics-dashboard-for-cabin' ) );
+	$links = array( 'summary' => __( 'Summary', 'uplink-analytics-dashboard-for-cabin' ) );
+	if ( ! empty( $data['energy'] ) || ! empty( $data['scroll_depth'] ) ) { $links['attention'] = __( 'Attention', 'uplink-analytics-dashboard-for-cabin' ); }
+	$links += array( 'pages' => __( 'Top Pages', 'uplink-analytics-dashboard-for-cabin' ), 'referrals' => __( 'Referrals', 'uplink-analytics-dashboard-for-cabin' ), 'sources' => __( 'Sources', 'uplink-analytics-dashboard-for-cabin' ) );
 	if ( ! empty( $data['ai_agents'] ) ) { $links['ai-agents'] = __( 'AI agents', 'uplink-analytics-dashboard-for-cabin' ); }
 	if ( ! empty( $data['energy'] ) ) { $links['energy'] = __( 'Energy & Carbon', 'uplink-analytics-dashboard-for-cabin' ); }
 	$links += array( 'bounce' => __( 'Bounce Rate', 'uplink-analytics-dashboard-for-cabin' ), 'countries' => __( 'Countries', 'uplink-analytics-dashboard-for-cabin' ), 'languages' => __( 'Languages', 'uplink-analytics-dashboard-for-cabin' ), 'devices' => __( 'Devices', 'uplink-analytics-dashboard-for-cabin' ), 'screens' => __( 'Desktop Screen Sizes', 'uplink-analytics-dashboard-for-cabin' ), 'browsers' => __( 'Browsers', 'uplink-analytics-dashboard-for-cabin' ), 'operating-systems' => __( 'OS', 'uplink-analytics-dashboard-for-cabin' ) );
-	if ( ! empty( $data['energy'] ) || ! empty( $data['scroll_depth'] ) ) { $links['attention'] = __( 'Attention', 'uplink-analytics-dashboard-for-cabin' ); }
 	if ( array_key_exists( 'events', $data ) ) { $links['events'] = __( 'Events', 'uplink-analytics-dashboard-for-cabin' ); }
 	foreach ( $links as $id => $label ) : ?><a href="#<?php echo esc_attr( $id ); ?>"<?php echo 'summary' === $id ? ' aria-current="location"' : ''; ?>><?php echo esc_html( $label ); ?></a><?php endforeach; ?>
 	</nav><main id="uplianda-dash-main" class="uplianda-dash-main">
@@ -470,6 +527,21 @@ function uplianda_render_private_dashboard() {
 	<?php uplianda_dashboard_chart_panel( __( 'Visitors', 'uplink-analytics-dashboard-for-cabin' ), $data['daily_data'] ?? array(), 'unique_visitors', 'bars' ); ?></div></section>
 
 	<?php
+	if ( ! empty( $data['energy'] ) || ! empty( $data['scroll_depth'] ) ) {
+		$energy       = is_array( $data['energy'] ?? null ) ? $data['energy'] : array();
+		$scroll_depth = is_array( $data['scroll_depth'] ?? null ) ? $data['scroll_depth'] : array();
+		uplianda_dashboard_section_open( 'attention', __( 'Attention', 'uplink-analytics-dashboard-for-cabin' ), __( 'Time and scroll engagement', 'uplink-analytics-dashboard-for-cabin' ), $range );
+		?>
+		<div class="uplianda-dash-summary uplianda-dash-summary--attention">
+			<?php if ( ! empty( $energy ) ) : ?>
+			<div class="uplianda-dash-stat"><span><?php esc_html_e( 'Average Time Spent / Page', 'uplink-analytics-dashboard-for-cabin' ); ?></span><strong><?php echo esc_html( ltrim( uplianda_dashboard_duration( ( $energy['average_time_spent_ms'] ?? 0 ) / 1000 ), '~' ) ); ?></strong></div>
+			<div class="uplianda-dash-stat"><span><?php esc_html_e( 'Total Time Spent', 'uplink-analytics-dashboard-for-cabin' ); ?></span><strong><?php echo esc_html( ltrim( uplianda_dashboard_duration( ( $energy['duration_total_ms'] ?? 0 ) / 1000 ), '~' ) ); ?></strong></div>
+			<?php endif; ?>
+			<?php if ( ! empty( $scroll_depth ) ) : uplianda_dashboard_scroll_depth_stat( $scroll_depth ); endif; ?>
+		</div></section>
+		<?php
+	}
+
 	$pages        = is_array( $data['pages'] ?? null ) ? array_values( $data['pages'] ) : array();
 	$pages_id     = wp_unique_id( 'uplianda-dashboard-pages-' );
 	$pages_label  = __( 'Top Pages', 'uplink-analytics-dashboard-for-cabin' );
@@ -545,13 +617,6 @@ function uplianda_render_private_dashboard() {
 	);
 	foreach ( $ranked_sections as $id => $section ) {
 		uplianda_dashboard_section_open( $id, $section[0], $section[1], $range ); echo '<div class="uplianda-dash-card">'; uplianda_dashboard_ranked_list( $section[2], $section[0] ); echo '</div></section>';
-	}
-
-	if ( ! empty( $data['energy'] ) || ! empty( $data['scroll_depth'] ) ) {
-		uplianda_dashboard_section_open( 'attention', __( 'Attention', 'uplink-analytics-dashboard-for-cabin' ), __( 'Time and scroll engagement', 'uplink-analytics-dashboard-for-cabin' ), $range );
-		?>
-		<div class="uplianda-dash-summary"><div class="uplianda-dash-stat"><span><?php esc_html_e( 'Average time', 'uplink-analytics-dashboard-for-cabin' ); ?></span><strong><?php echo esc_html( uplianda_dashboard_duration( ( $data['energy']['average_time_spent_ms'] ?? 0 ) / 1000 ) ); ?></strong></div><div class="uplianda-dash-stat"><span><?php esc_html_e( 'Total attention', 'uplink-analytics-dashboard-for-cabin' ); ?></span><strong><?php echo esc_html( uplianda_dashboard_duration( ( $data['energy']['duration_total_ms'] ?? 0 ) / 1000 ) ); ?></strong></div><div class="uplianda-dash-stat"><span><?php esc_html_e( 'Average scroll depth', 'uplink-analytics-dashboard-for-cabin' ); ?></span><strong><?php echo esc_html( number_format_i18n( (float) ( $data['scroll_depth']['average_percentage'] ?? 0 ) ) . '%' ); ?></strong></div></div></section>
-		<?php
 	}
 
 	if ( array_key_exists( 'events', $data ) ) {
